@@ -2823,6 +2823,18 @@ async function supaFetch(path, opts={}){
   return fetch(`${SUPA_URL}/rest/v1/${path}`, {...opts, headers});
 }
 
+// Edge Function: para todo lo que RLS bloquea a la anon key (usuarios + escrituras).
+const EDGE_URL = `${SUPA_URL}/functions/v1/super-service`;
+async function edgeCall(payload){
+  const resp = await fetch(EDGE_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','Authorization':`Bearer ${SUPA_KEY}`},
+    body: JSON.stringify(payload)
+  });
+  const data = await resp.json().catch(()=>({ok:false,error:'Respuesta inválida'}));
+  return { ok: resp.ok && data.ok, data };
+}
+
 window.addEventListener('load', ()=>{
   const saved = sessionStorage.getItem('go_session');
   if(saved){
@@ -3010,12 +3022,11 @@ function logout(){
 // ===== Gestión de contraseña propia =====
 async function checkFirstLogin(){
   if(!currentUser) return;
-  try{
-    const resp = await supaFetch(`usuarios?usuario=eq.${encodeURIComponent(currentUser.usuario)}&select=password`);
-    const data = await resp.json();
-    const pw = (data && data[0]) ? (data[0].password||'') : '';
-    if(!pw){ showChangePassword(true); }   // sin contraseña => primer ingreso obligatorio
-  }catch(e){}
+  // El login (Edge Function) ya calculó has_password y dejó esta bandera.
+  // No leemos la tabla usuarios desde el cliente porque RLS la bloquea a la anon key.
+  if(sessionStorage.getItem('go_needs_password') === 'true'){
+    showChangePassword(true);
+  }
 }
 
 window.showChangePassword = function(force){
@@ -3049,8 +3060,9 @@ window.submitPassword = async function(force){
   if(p1.length<4){ show('La contraseña debe tener al menos 4 caracteres','#f87171'); return; }
   if(p1!==p2){ show('Las contraseñas no coinciden','#f87171'); return; }
   try{
-    const resp = await supaFetch(`usuarios?usuario=eq.${encodeURIComponent(currentUser.usuario)}`, {method:'PATCH', body:JSON.stringify({password:p1})});
-    if(resp.ok){
+    const { ok } = await edgeCall({ action:'change_password', usuario: currentUser.usuario, password: p1 });
+    if(ok){
+      sessionStorage.removeItem('go_needs_password');
       show('✅ Contraseña guardada correctamente','#4ade80');
       setTimeout(()=>{ const m=document.getElementById('pwd-modal-bg'); if(m) m.remove(); }, 900);
     } else { show('Error al guardar la contraseña','#f87171'); }
@@ -3119,12 +3131,15 @@ function showAdminTab(tab){
   else loadAdminMes();
 }
 
+let _adminUsers = [];
 async function loadAdminUsers(){
   const content = document.getElementById('admin-content');
   content.innerHTML = '<div style="color:rgba(255,255,255,.5);padding:20px;text-align:center">Cargando usuarios...</div>';
   try{
-    const resp = await supaFetch('usuarios?select=*&order=tipo,usuario');
-    const users = await resp.json();
+    const { ok, data } = await edgeCall({ action:'list_users' });
+    if(!ok) throw new Error(data.error||'Error');
+    const users = data.registros || [];
+    _adminUsers = users;
     const INSTS = ['parque','ninos','icr','ctc','cibic','go_funes'];
     const INST_LABELS = ['PARQUE','NIÑOS','ICR','CTC','CIBIC','GO FUNES'];
     content.innerHTML = `
@@ -3163,7 +3178,7 @@ async function loadAdminUsers(){
 }
 
 async function toggleUser(id, activo){
-  await supaFetch(`usuarios?id=eq.${id}`, {method:'PATCH', body:JSON.stringify({activo:!activo})});
+  await edgeCall({ action:'toggle_user', id, activo: !activo });
   loadAdminUsers();
 }
 
@@ -3218,17 +3233,17 @@ function showUserForm(userData){
     </div>`;
 }
 
-async function editUser(id){
-  const resp = await supaFetch(`usuarios?id=eq.${id}&select=*`);
-  const data = await resp.json();
-  if(data.length) showUserForm(data[0]);
-  document.getElementById('user-form-wrap').scrollIntoView({behavior:'smooth'});
+function editUser(id){
+  const u = _adminUsers.find(x=>x.id===id);
+  if(u) showUserForm(u);
+  document.getElementById('user-form-wrap')?.scrollIntoView({behavior:'smooth'});
 }
 
 async function resetUserPass(id){
   if(!confirm('¿Resetear la contraseña de este usuario? Deberá crear una nueva en su próximo ingreso.')) return;
   try{
-    await supaFetch(`usuarios?id=eq.${id}`, {method:'PATCH', body:JSON.stringify({password:''})});
+    const { ok } = await edgeCall({ action:'reset_password', id });
+    if(!ok) throw new Error();
     document.getElementById('user-form-wrap').innerHTML='';
     loadAdminUsers();
   }catch(e){ alert('Error al resetear la contraseña'); }
@@ -3254,18 +3269,13 @@ async function saveUser(id){
   else if(pass){ body.password = pass; }
 
   try{
-    let resp;
-    if(id === null || id === 'null'){
-      resp = await supaFetch('usuarios', {method:'POST', body:JSON.stringify(body), headers:{'Prefer':'return=representation'}});
-    } else {
-      resp = await supaFetch(`usuarios?id=eq.${id}`, {method:'PATCH', body:JSON.stringify(body)});
-    }
-    if(resp.ok){
+    const isNew = (id === null || id === 'null');
+    const { ok, data } = await edgeCall({ action:'save_user', id: isNew ? null : id, registro: body });
+    if(ok){
       document.getElementById('user-form-wrap').innerHTML='';
       loadAdminUsers();
     } else {
-      const err = await resp.json();
-      document.getElementById('uf-error').textContent = err.message||'Error al guardar';
+      document.getElementById('uf-error').textContent = (data && data.error) || 'Error al guardar';
       document.getElementById('uf-error').style.display='block';
     }
   } catch(e){
@@ -3408,13 +3418,13 @@ async function loadConfigPaso2(){
 }
 
 async function toggleMes(id, activo){
-  await supaFetch(`archivos_mes?id=eq.${id}`, {method:'PATCH', body:JSON.stringify({activo:!activo})});
+  await edgeCall({ action:'toggle_mes', id, activo: !activo });
   loadAdminMes();
 }
 
 async function eliminarMes(id, nombre){
   if(!confirm(`¿Eliminar definitivamente "${nombre}"? Esta acción no se puede deshacer.`)) return;
-  await supaFetch(`archivos_mes?id=eq.${id}`, {method:'DELETE'});
+  await edgeCall({ action:'delete_mes', id });
   loadAdminMes();
 }
 
@@ -3560,15 +3570,9 @@ async function procesarExcel(){
       activo: true
     };
 
-    const saveResp = await supaFetch('archivos_mes', {
-      method:'POST',
-      body: JSON.stringify(body),
-      headers: {'Prefer':'return=representation'}
-    });
-
-    if(!saveResp.ok){
-      const err = await saveResp.json();
-      throw new Error(err.message||'Error al guardar');
+    const { ok, data } = await edgeCall({ action:'save_mes', registro: body });
+    if(!ok){
+      throw new Error((data && data.error) || 'Error al guardar');
     }
 
     setProgress(100, 'Guardado correctamente');
@@ -3600,8 +3604,8 @@ function showMesError(msg){
 
 async function saveConfig(id, prefix='cfg-'){
   const val = document.getElementById((prefix||'cfg-')+id)?.value?.trim();
-  const resp = await supaFetch(`configuracion?id=eq.${id}`, {method:'PATCH', body:JSON.stringify({valor:val})});
-  if(resp.ok){
+  const { ok } = await edgeCall({ action:'save_config', id, valor: val });
+  if(ok){
     const input = document.getElementById((prefix||'cfg-')+id);
     if(input){ input.style.borderColor='#4ade80'; setTimeout(()=>input.style.borderColor='rgba(255,255,255,.15)',2000); }
   }
