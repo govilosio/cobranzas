@@ -1296,7 +1296,26 @@ function parseArg(v){
   return parseFloat(s) || 0;
 }
 
+// Fallback por si la config de Supabase no responde. La URL "en vivo" real
+// se lee de la tabla configuracion (panel Admin → Paso 2) vía getLiveUrl().
 const JUNIO_APPS_SCRIPT = 'https://script.google.com/macros/s/AKfycbyA-OrMASPP1pEX3f7zegnbpwdbpGtdjfGMRAqHGJm_KUq7zeS9vD8HvFM33ZcUnZ0/exec';
+
+let LIVE_URL_CACHE = null;
+async function getLiveUrl(){
+  if(LIVE_URL_CACHE) return LIVE_URL_CACHE;
+  try{
+    const resp = await supaFetch('configuracion?select=clave,valor');
+    const rows = await resp.json();
+    // 1) Preferir una clave que hable de apps script / url / live / mes en vivo
+    let row = rows.find(r => /apps?[_-]?script|script[_-]?url|url[_-]?(live|vivo|mes)|live[_-]?url/i.test(String(r.clave||'')));
+    // 2) Si no, cualquier fila cuyo valor sea una URL de Apps Script
+    if(!row) row = rows.find(r => String(r.valor||'').includes('script.google.com'));
+    LIVE_URL_CACHE = (row && String(row.valor||'').trim()) ? row.valor.trim() : JUNIO_APPS_SCRIPT;
+  }catch(e){
+    LIVE_URL_CACHE = JUNIO_APPS_SCRIPT;
+  }
+  return LIVE_URL_CACHE;
+}
 
 async function loadJunio(){
   document.getElementById('junio-loading').style.display='block';
@@ -1304,7 +1323,7 @@ async function loadJunio(){
   document.getElementById('junio-content').style.display='none';
 
   try{
-    const resp = await fetch(JUNIO_APPS_SCRIPT);
+    const resp = await fetch(await getLiveUrl());
     if(!resp.ok) throw new Error('HTTP '+resp.status);
     const rows = await resp.json();
 
@@ -2575,7 +2594,7 @@ async function loadResponsables(){
   document.getElementById('resp-content').style.display='none';
 
   try{
-    const resp = await fetch(JUNIO_APPS_SCRIPT);
+    const resp = await fetch(await getLiveUrl());
     if(!resp.ok) throw new Error('HTTP '+resp.status);
     const rows = await resp.json();
 
