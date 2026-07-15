@@ -1182,6 +1182,31 @@ function buildMesAnterior(instData, financData){
     });
   }
 
+  // Detalle por financiador del MES ANTERIOR (para abrir el modal con las facturas)
+  // Mismo criterio que el Mes en Curso: se agrupan facturas y débitos por financiador
+  // tomando el detalle por comprobante de RAW_DATA[mes], solo de las instituciones permitidas.
+  (function(){
+    const mesAnt = window._mesAnteriorNombre || Object.keys(RAW_DATA||{}).filter(m=>m!==window._liveMesNombre).slice(-1)[0];
+    window._mesAntNombreDetalle = mesAnt;
+    const detalle = {};
+    const monthData = (RAW_DATA||{})[mesAnt] || {};
+    allowedInsts.forEach(inst=>{
+      const dd = monthData[inst] || RAW_DATA[inst];
+      if(!dd) return;
+      (dd.facturas||[]).forEach(r=>{
+        const f=(r.financiador||'').trim(); if(!f) return;
+        if(!detalle[f]) detalle[f]={facturas:[],debitos:[]};
+        detalle[f].facturas.push({...r, institucion:inst});
+      });
+      (dd.debitos||[]).forEach(r=>{
+        const f=(r.financiador||'').trim(); if(!f) return;
+        if(!detalle[f]) detalle[f]={facturas:[],debitos:[]};
+        detalle[f].debitos.push({...r, institucion:inst});
+      });
+    });
+    window._mesAntFinDetail = detalle;
+  })();
+
   // Financiadores table
   const ftbody=document.getElementById('fin-tbody');
   if(ftbody){
@@ -1214,6 +1239,12 @@ function buildMesAnterior(instData, financData){
       const nc=d.presup-(d.cobrado+d.debitado);
       const ncClass=nc<0?'cell-brown':'cell-green';
       const tr=document.createElement('tr');
+      const tieneDetalle = !!(window._mesAntFinDetail && window._mesAntFinDetail[d.name]);
+      if(tieneDetalle){
+        tr.style.cursor='pointer';
+        tr.title='Click para ver las facturas de '+d.name;
+        tr.onclick=()=>openMesAntFinModal(d.name);
+      }
       tr.innerHTML=`
         <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.name}">${d.name}</td>
         <td class="r">${fmtFull(d.presup)}</td>
@@ -1257,8 +1288,32 @@ window.addEventListener('load',()=>{
 // MODAL
 let currentInst='',currentTab='facturas',currentData=[];
 
+// Mes que alimenta la pestaña Mes Anterior (dinámico, ya no "Mayo" fijo)
+function _mesAntKey(){
+  return window._mesAnteriorNombre || window._mesAntNombreDetalle || Object.keys(RAW_DATA||{}).filter(m=>m!==window._liveMesNombre).slice(-1)[0];
+}
+
+// Detalle de un financiador (Mes Anterior): muestra sus facturas y débitos
+function openMesAntFinModal(fin){
+  const d=(window._mesAntFinDetail||{})[fin];
+  if(!d) return;
+  currentInst=fin;
+  currentTab='facturas';
+  window._modalData={facturas:d.facturas||[],debitos:d.debitos||[]};
+  const mes = _mesAntKey() || 'Mes anterior';
+  document.getElementById('modal-title').textContent=fin+' — '+mes;
+  document.getElementById('cnt-fact').textContent=(d.facturas||[]).length;
+  document.getElementById('cnt-deb').textContent=(d.debitos||[]).length;
+  document.getElementById('tab-fact').classList.add('active');
+  document.getElementById('tab-deb').classList.remove('active');
+  document.getElementById('search-input').value='';
+  document.getElementById('cobrado-filter').value='';
+  renderTable(d.facturas||[]);
+  document.getElementById('modal').classList.add('open');
+}
+
 function openModal(instName){
-  const d=RAW_DATA["Mayo"]?.[instName]||RAW_DATA[instName];
+  const d=RAW_DATA[_mesAntKey()]?.[instName]||RAW_DATA[instName];
   if(!d)return;
   window._modalData={facturas:d.facturas||[],debitos:d.debitos||[]};
   currentInst=instName;currentTab='facturas';
@@ -1278,7 +1333,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 
 function switchTab(tab){
   currentTab=tab;
-  const d=window._modalData||RAW_DATA["Mayo"]?.[currentInst]||RAW_DATA[currentInst];if(!d)return;
+  const d=window._modalData||RAW_DATA[_mesAntKey()]?.[currentInst]||RAW_DATA[currentInst];if(!d)return;
   document.getElementById('tab-fact').classList.toggle('active',tab==='facturas');
   document.getElementById('tab-deb').classList.toggle('active',tab==='debitos');
   document.getElementById('search-input').value='';
@@ -1287,7 +1342,7 @@ function switchTab(tab){
 }
 
 function filterTable(){
-  const d=window._modalData||RAW_DATA["Mayo"]?.[currentInst]||RAW_DATA[currentInst];if(!d)return;
+  const d=window._modalData||RAW_DATA[_mesAntKey()]?.[currentInst]||RAW_DATA[currentInst];if(!d)return;
   const q=document.getElementById('search-input').value.toLowerCase();
   const cf=document.getElementById('cobrado-filter').value;
   let rows=d[currentTab];
@@ -1370,6 +1425,10 @@ function parseArg(v){
 // se lee de la tabla configuracion (panel Admin → Paso 2) vía getLiveUrl().
 const JUNIO_APPS_SCRIPT = 'https://script.google.com/macros/s/AKfycbyA-OrMASPP1pEX3f7zegnbpwdbpGtdjfGMRAqHGJm_KUq7zeS9vD8HvFM33ZcUnZ0/exec';
 
+// Nombre del mes "en curso" (el que trae el Apps Script en vivo).
+// >>> AL CERRAR EL MES: cambiar solo esta línea (ej. 'Julio'). <<<
+window._liveMesNombre = 'Junio';
+
 let LIVE_URL_CACHE = null;
 async function getLiveUrl(){
   if(LIVE_URL_CACHE) return LIVE_URL_CACHE;
@@ -1401,6 +1460,7 @@ async function loadJunio(){
     const allFinanc={};
     const instMap={};
     const finDetail={};
+    const factLive={};   // { financiador: { institucion: adeudado } } → alimenta FACTURADO_DATA del mes en curso
     junioData={};
 
     rows.forEach(row=>{
@@ -1428,6 +1488,10 @@ async function loadJunio(){
       instMap[inst].debitado += deb;
       instMap[inst].neto     += net;
 
+      // Facturado del mes en curso (mismo criterio que FACTURADO_DATA: adeudado de TODAS las filas)
+      if(!factLive[fin]) factLive[fin]={};
+      factLive[fin][inst] = (factLive[fin][inst]||0) + ad;
+
       // Per financiador
       if(!allFinanc[fin]) allFinanc[fin]={presup:0,cobrado:0,debitado:0,neto:0};
       allFinanc[fin].presup   += ad;
@@ -1450,6 +1514,10 @@ async function loadJunio(){
     // Store in junioData
     Object.entries(instMap).forEach(([inst,d])=>{ junioData[inst]=d; });
     window._junioFinDetail = finDetail;
+
+    // Dejar el mes en curso disponible para la pestaña Débitos
+    window._liveRaw = { raw: instMap, fact: factLive };
+    injectLiveMesEnDebitos();
 
     const pctNeto = totalPresup ? totalNeto/totalPresup*100 : 0;
     const pctDeb  = totalNeto   ? totalDebitado/totalNeto*100 : 0;
@@ -1721,6 +1789,51 @@ function computeDebitosData(){
   DEBITOS_DATA.all_fins_evo = all_fins_evo;
   DEBITOS_DATA.heatmap = heatmap;
   return DEBITOS_DATA;
+}
+
+// ── MES EN CURSO DENTRO DE LA PESTAÑA DÉBITOS ──
+// El mes en vivo no está en Supabase (archivos_mes guarda solo meses cerrados), por eso
+// se inyecta en RAW_DATA/FACTURADO_DATA con la misma forma que los meses cerrados y se
+// recalculan las métricas. Se llama desde loadJunio() y también después de la carga de
+// Supabase (que resetea RAW_DATA), sin importar cuál de las dos termine primero.
+function injectLiveMesEnDebitos(){
+  const L = window._liveRaw;
+  const mes = window._liveMesNombre;
+  if(!L || !mes) return false;
+  RAW_DATA[mes] = L.raw;
+  if(!FACTURADO_DATA) FACTURADO_DATA = {};
+  FACTURADO_DATA[mes] = L.fact;
+  const _ordenM = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  MESES = Object.keys(RAW_DATA||{}).sort((a,b)=>_ordenM.indexOf(a)-_ordenM.indexOf(b));
+  try { computeDebitosData(); } catch(e){ console.warn('computeDebitosData (live)', e); }
+  populateDebMeses();
+  // Si la pestaña Débitos ya estaba construida, refrescar con el mes nuevo incluido
+  if(window._debitosBuilt && typeof buildDebitosCharts === 'function'){
+    try { buildDebitosCharts(); } catch(e){ console.warn('buildDebitosCharts (live)', e); }
+  }
+  return true;
+}
+
+// Rellena el desplegable de meses de Débitos con los meses realmente disponibles
+// (cerrados + mes en curso), preservando la selección actual del usuario.
+function populateDebMeses(){
+  const sel = document.getElementById('deb-mes-ranking');
+  if(!sel) return;
+  const _ordenM = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const meses = (DEBITOS_DATA.meses && DEBITOS_DATA.meses.length ? DEBITOS_DATA.meses : Object.keys(RAW_DATA||{}))
+                  .slice().sort((a,b)=>_ordenM.indexOf(a)-_ordenM.indexOf(b));
+  if(!meses.length) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Todos los meses</option>';
+  meses.forEach(m=>{
+    let label = m;
+    if(m === window._liveMesNombre) label = m + ' (En curso)';
+    else if(m === window._mesAnteriorNombre) label = m + ' (Anterior)';
+    const o = document.createElement('option');
+    o.value = m; o.textContent = label;
+    sel.appendChild(o);
+  });
+  if(prev && meses.includes(prev)) sel.value = prev;
 }
 
 let MESES = []; // [SUPABASE] lista de meses dinámica (claves de Supabase)
@@ -2197,10 +2310,13 @@ const SEMAFORO_LABEL = (pct) => pct >= 4 ? '<span style="color:#dc2626">&#11044;
 function buildDebitos(){
   // [SUPABASE] Recalcular métricas desde el RAW_DATA cargado de Supabase
   try { if(typeof computeDebitosData === 'function') computeDebitosData(); } catch(e){ console.warn('computeDebitosData', e); }
+  // Meses disponibles (cerrados + mes en curso)
+  try { populateDebMeses(); } catch(e){ console.warn('populateDebMeses', e); }
   // Populate financiador search list (datalist)
   const D = DEBITOS_DATA;
   const dl = document.getElementById('deb-fin-list');
-  if(dl && !dl.children.length){
+  if(dl){
+    dl.innerHTML='';
     [...D.all_fins].sort((a,b)=>a.localeCompare(b)).forEach(fin=>{
       const opt = document.createElement('option');
       opt.value = fin;
@@ -3056,6 +3172,11 @@ function showApp(){
     const _ordenM = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     MESES = Object.keys(RAW_DATA||{}).sort((a,b)=>_ordenM.indexOf(a)-_ordenM.indexOf(b));
     try { computeDebitosData(); } catch(e){ console.warn('computeDebitosData error', e); }
+
+    // La carga de Supabase resetea RAW_DATA: volver a inyectar el mes en curso si ya llegó
+    // (si todavía no llegó, loadJunio() lo inyecta cuando termine).
+    injectLiveMesEnDebitos();
+    populateDebMeses();
 
     // Si el tab Débitos ya estaba abierto cuando llegaron los datos, reconstruir
     // (buildDebitosCharts re-captura D y MESES_D, evitando closures desactualizados)
