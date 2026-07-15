@@ -478,14 +478,14 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
 <div id="page-junio" class="page-content active">
 <main>
   <div class="sec-title" style="display:flex;align-items:center;gap:10px">
-    Junio 2026 — Datos en tiempo real
+    <span id="junio-sec-title">Junio 2026 — Datos en tiempo real</span>
     <span id="junio-update" style="font-size:10px;color:var(--gray-500);font-weight:400;text-transform:none;letter-spacing:0"></span>
   </div>
 
   <!-- loading state -->
   <div id="junio-loading" style="text-align:center;padding:60px 20px;color:var(--gray-500)">
     <div style="font-size:32px;margin-bottom:12px">⏳</div>
-    <div style="font-size:14px;font-weight:500">Cargando datos de Junio...</div>
+    <div id="junio-loading-txt" style="font-size:14px;font-weight:500">Cargando datos...</div>
     <div style="font-size:12px;margin-top:6px">Conectando con Google Sheets</div>
   </div>
 
@@ -644,7 +644,7 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
 <div id="page-debitos" class="page-content">
 <main>
 
-  <div class="sec-title">Resumen de Débitos — Enero a Mayo 2026</div>
+  <div class="sec-title" id="deb-sec-title">Resumen de Débitos — 2026</div>
 
   <!-- FILTROS GLOBALES DE LA PÁGINA -->
   <div class="deb-filter-bar">
@@ -755,7 +755,7 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
 <div id="page-responsables" class="page-content">
 <main>
   <div class="sec-title" style="display:flex;align-items:center;gap:10px">
-    Responsables — Junio 2026 EN VIVO
+    <span id="resp-sec-title">Responsables — Junio 2026 EN VIVO</span>
     <span id="resp-update" style="font-size:10px;color:var(--gray-500);font-weight:400;text-transform:none;letter-spacing:0"></span>
   </div>
 
@@ -925,7 +925,7 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
 </div><!-- end page-iapos -->
 
 
-<footer>Grupo Oroño · Datos al 29 de Mayo 2026</footer>
+<footer id="app-footer">Grupo Oroño</footer>
 
 <!-- MOBILE BOTTOM NAV -->
 <div class="mobile-bottom-nav" id="mobile-nav">
@@ -1186,7 +1186,7 @@ function buildMesAnterior(instData, financData){
   // Mismo criterio que el Mes en Curso: se agrupan facturas y débitos por financiador
   // tomando el detalle por comprobante de RAW_DATA[mes], solo de las instituciones permitidas.
   (function(){
-    const mesAnt = window._mesAnteriorNombre || Object.keys(RAW_DATA||{}).filter(m=>m!==window._liveMesNombre).slice(-1)[0];
+    const mesAnt = window._mesAnteriorNombre || Object.keys(RAW_DATA||{}).filter(m=>m!==window._liveInjectedKey).slice(-1)[0];
     window._mesAntNombreDetalle = mesAnt;
     const detalle = {};
     const monthData = (RAW_DATA||{})[mesAnt] || {};
@@ -1290,7 +1290,7 @@ let currentInst='',currentTab='facturas',currentData=[];
 
 // Mes que alimenta la pestaña Mes Anterior (dinámico, ya no "Mayo" fijo)
 function _mesAntKey(){
-  return window._mesAnteriorNombre || window._mesAntNombreDetalle || Object.keys(RAW_DATA||{}).filter(m=>m!==window._liveMesNombre).slice(-1)[0];
+  return window._mesAnteriorNombre || window._mesAntNombreDetalle || Object.keys(RAW_DATA||{}).filter(m=>m!==window._liveInjectedKey).slice(-1)[0];
 }
 
 // Detalle de un financiador (Mes Anterior): muestra sus facturas y débitos
@@ -1425,9 +1425,20 @@ function parseArg(v){
 // se lee de la tabla configuracion (panel Admin → Paso 2) vía getLiveUrl().
 const JUNIO_APPS_SCRIPT = 'https://script.google.com/macros/s/AKfycbyA-OrMASPP1pEX3f7zegnbpwdbpGtdjfGMRAqHGJm_KUq7zeS9vD8HvFM33ZcUnZ0/exec';
 
-// Nombre del mes "en curso" (el que trae el Apps Script en vivo).
-// >>> AL CERRAR EL MES: cambiar solo esta línea (ej. 'Julio'). <<<
-window._liveMesNombre = 'Junio';
+// ── NOMBRES DE MES (única fuente de verdad) ──
+// _mesAnteriorNombre  = mes cerrado marcado tipo='anterior' en Supabase (pestaña Mes Anterior).
+// liveMesNombre()     = mes que trae el Apps Script en vivo = el mes SIGUIENTE al anterior.
+// Al cerrar un mes desde el panel Admin (marcarlo 'anterior' + repuntar la URL del Apps Script),
+// todos los títulos y etiquetas se reacomodan solos. No hay que tocar código.
+const ORDEN_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const ANIO_PANEL = 2026;
+function liveMesNombre(){
+  const ant = window._mesAnteriorNombre;
+  const i = ORDEN_MESES.indexOf(ant);
+  if(i >= 0 && i < ORDEN_MESES.length-1) return ORDEN_MESES[i+1];
+  return window._liveMesFallback || 'Junio';
+}
+window._liveMesFallback = 'Junio'; // solo si Supabase no responde
 
 let LIVE_URL_CACHE = null;
 async function getLiveUrl(){
@@ -1525,7 +1536,7 @@ async function loadJunio(){
     // KPIs
     const kpiWrap = document.getElementById('junio-kpis');
     kpiWrap.innerHTML=`
-      <div class="kpi-card"><div class="kpi-label">Presupuestado</div><div class="kpi-value">${fmt(totalPresup)}</div><div class="kpi-sub">Junio 2026</div></div>
+      <div class="kpi-card"><div class="kpi-label">Presupuestado</div><div class="kpi-value">${fmt(totalPresup)}</div><div class="kpi-sub">${liveMesNombre()} ${ANIO_PANEL}</div></div>
       <div class="kpi-card k-green"><div class="kpi-label">Cobrado + Débitos</div><div class="kpi-value">${fmt(totalNeto)}</div><div class="kpi-sub">cobrado + debitado del período</div></div>
       <div class="kpi-pct"><div class="kpi-label">% del Presupuesto</div><div class="kpi-pct-value">${pctNeto.toFixed(2)}%</div><div class="kpi-sub">cobrado + débitos</div></div>
       <div class="kpi-card k-blue"><div class="kpi-label">Cobrado (en $)</div><div class="kpi-value">${fmt(totalCobrado)}</div><span class="kpi-badge kb-blue">${(totalPresup?totalCobrado/totalPresup*100:0).toFixed(2)}% del ppto (sin débitos)</span></div>
@@ -1656,7 +1667,7 @@ function openJunioModal(inst){
   currentInst=inst;
   currentTab='facturas';
   window._modalData={facturas:d.facturas,debitos:d.debitos};
-  document.getElementById('modal-title').textContent=inst+' — Junio 2026 (en vivo)';
+  document.getElementById('modal-title').textContent=inst+' — '+liveMesNombre()+' '+ANIO_PANEL+' (en vivo)';
   document.getElementById('cnt-fact').textContent=d.facturas.length;
   document.getElementById('cnt-deb').textContent=d.debitos.length;
   document.getElementById('tab-fact').classList.add('active');
@@ -1674,7 +1685,7 @@ function openJunioFinModal(fin){
   currentInst=fin;
   currentTab='facturas';
   window._modalData={facturas:d.facturas||[],debitos:d.debitos||[]};
-  document.getElementById('modal-title').textContent=fin+' — Junio 2026 (en vivo)';
+  document.getElementById('modal-title').textContent=fin+' — '+liveMesNombre()+' '+ANIO_PANEL+' (en vivo)';
   document.getElementById('cnt-fact').textContent=(d.facturas||[]).length;
   document.getElementById('cnt-deb').textContent=(d.debitos||[]).length;
   document.getElementById('tab-fact').classList.add('active');
@@ -1798,15 +1809,24 @@ function computeDebitosData(){
 // Supabase (que resetea RAW_DATA), sin importar cuál de las dos termine primero.
 function injectLiveMesEnDebitos(){
   const L = window._liveRaw;
-  const mes = window._liveMesNombre;
+  const mes = liveMesNombre();
   if(!L || !mes) return false;
+  // Si antes se inyectó bajo otra clave (p.ej. el feed llegó antes que Supabase y todavía
+  // no se sabía cuál era el mes anterior), limpiarla para no duplicar meses.
+  if(window._liveInjectedKey && window._liveInjectedKey !== mes){
+    delete RAW_DATA[window._liveInjectedKey];
+    if(FACTURADO_DATA) delete FACTURADO_DATA[window._liveInjectedKey];
+  }
+  // Nunca pisar un mes ya cerrado en Supabase
+  if(RAW_DATA[mes] && mes === window._mesAnteriorNombre) return false;
   RAW_DATA[mes] = L.raw;
   if(!FACTURADO_DATA) FACTURADO_DATA = {};
   FACTURADO_DATA[mes] = L.fact;
-  const _ordenM = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  MESES = Object.keys(RAW_DATA||{}).sort((a,b)=>_ordenM.indexOf(a)-_ordenM.indexOf(b));
+  window._liveInjectedKey = mes;
+  MESES = Object.keys(RAW_DATA||{}).sort((a,b)=>ORDEN_MESES.indexOf(a)-ORDEN_MESES.indexOf(b));
   try { computeDebitosData(); } catch(e){ console.warn('computeDebitosData (live)', e); }
   populateDebMeses();
+  refreshMesLabels();
   // Si la pestaña Débitos ya estaba construida, refrescar con el mes nuevo incluido
   if(window._debitosBuilt && typeof buildDebitosCharts === 'function'){
     try { buildDebitosCharts(); } catch(e){ console.warn('buildDebitosCharts (live)', e); }
@@ -1819,21 +1839,51 @@ function injectLiveMesEnDebitos(){
 function populateDebMeses(){
   const sel = document.getElementById('deb-mes-ranking');
   if(!sel) return;
-  const _ordenM = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const meses = (DEBITOS_DATA.meses && DEBITOS_DATA.meses.length ? DEBITOS_DATA.meses : Object.keys(RAW_DATA||{}))
-                  .slice().sort((a,b)=>_ordenM.indexOf(a)-_ordenM.indexOf(b));
+                  .slice().sort((a,b)=>ORDEN_MESES.indexOf(a)-ORDEN_MESES.indexOf(b));
   if(!meses.length) return;
   const prev = sel.value;
   sel.innerHTML = '<option value="">Todos los meses</option>';
+  const live = liveMesNombre();
   meses.forEach(m=>{
     let label = m;
-    if(m === window._liveMesNombre) label = m + ' (En curso)';
-    else if(m === window._mesAnteriorNombre) label = m + ' (Anterior)';
+    if(m === window._mesAnteriorNombre) label = m + ' (Anterior)';
+    else if(m === live) label = m + ' (En curso)';
     const o = document.createElement('option');
     o.value = m; o.textContent = label;
     sel.appendChild(o);
   });
   if(prev && meses.includes(prev)) sel.value = prev;
+}
+
+// Escribe los nombres de mes en todos los títulos/etiquetas de las hojas.
+// Reemplaza los textos que antes estaban fijos ("Junio 2026", "Enero a Mayo 2026", etc.).
+function refreshMesLabels(){
+  const live = liveMesNombre();
+  const ant  = window._mesAnteriorNombre;
+  const set = (id, txt)=>{ const el=document.getElementById(id); if(el) el.textContent = txt; };
+
+  // Hoja Mes Actual (en vivo)
+  set('junio-sec-title', `${live} ${ANIO_PANEL} — Datos en tiempo real`);
+  set('junio-loading-txt', `Cargando datos de ${live}...`);
+
+  // Hoja Responsables (en vivo)
+  set('resp-sec-title', `Responsables — ${live} ${ANIO_PANEL} EN VIVO`);
+
+  // Hoja Débitos: rango real de meses disponibles
+  const meses = (DEBITOS_DATA.meses||[]).slice().sort((a,b)=>ORDEN_MESES.indexOf(a)-ORDEN_MESES.indexOf(b));
+  set('deb-sec-title', meses.length
+      ? `Resumen de Débitos — ${meses[0]} a ${meses[meses.length-1]} ${ANIO_PANEL}`
+      : `Resumen de Débitos — ${ANIO_PANEL}`);
+
+  // Pestaña Mes Anterior
+  if(ant){
+    const t = document.querySelector('#page-mensual .sec-title');
+    if(t) t.textContent = 'Indicadores Globales — ' + ant;
+  }
+
+  // Footer
+  set('app-footer', `Grupo Oroño · Mes anterior: ${ant||'—'} ${ANIO_PANEL} · En curso: ${live} ${ANIO_PANEL} (en vivo)`);
 }
 
 let MESES = []; // [SUPABASE] lista de meses dinámica (claves de Supabase)
@@ -2760,7 +2810,7 @@ window.showDebDetail = function(financiador){
     const cob = Math.abs(r.cobrado||0);
     totDeb+=deb; totCob+=cob;
     return `<tr style="border-bottom:1px solid var(--gray-200)">
-      <td style="padding:6px 12px;font-size:11px;white-space:nowrap"><span style="background:rgba(14,124,123,.15);color:#1a6b5a;padding:1px 5px;border-radius:3px;font-weight:600;font-size:10px">${r.mes||'Mayo'}</span></td>
+      <td style="padding:6px 12px;font-size:11px;white-space:nowrap"><span style="background:rgba(14,124,123,.15);color:#1a6b5a;padding:1px 5px;border-radius:3px;font-weight:600;font-size:10px">${r.mes||_mesAntKey()||''}</span></td>
       <td style="padding:6px 12px;font-size:11px"><span style="background:rgba(14,124,123,.15);color:#1a6b5a;padding:1px 6px;border-radius:3px;font-weight:600">${r.inst}</span></td>
       <td style="padding:6px 12px;font-size:11px;white-space:nowrap">${r.comprobante||'—'}</td>
       <td style="padding:6px 12px;font-size:11px;color:#6b7280;white-space:nowrap">${r.fecha_fact||'—'}</td>
@@ -2828,7 +2878,7 @@ async function loadResponsables(){
     const totalDeb    = Object.values(byResp).reduce((a,v)=>a+v.debitado,0);
     const totalNC     = totalPresup - totalNeto;
     document.getElementById('resp-kpis').innerHTML=`
-      <div class="kpi-card"><div class="kpi-label">Responsables activos</div><div class="kpi-value" style="font-size:36px">${Object.keys(byResp).length}</div><div class="kpi-sub">Junio 2026</div></div>
+      <div class="kpi-card"><div class="kpi-label">Responsables activos</div><div class="kpi-value" style="font-size:36px">${Object.keys(byResp).length}</div><div class="kpi-sub">${liveMesNombre()} ${ANIO_PANEL}</div></div>
       <div class="kpi-card k-green"><div class="kpi-label">Total Cobrado + Débitos</div><div class="kpi-value">${fmt(totalNeto)}</div><span class="kpi-badge ${totalNeto>=totalPresup?'kb-green':'kb-red'}">${totalPresup?(totalNeto/totalPresup*100).toFixed(1)+'%':'—'} del presupuesto</span></div>
       <div class="kpi-card k-amber"><div class="kpi-label">Total Debitado</div><div class="kpi-value">${fmt(totalDeb)}</div><span class="kpi-badge kb-amber">${totalNeto?(totalDeb/totalNeto*100).toFixed(1)+'%':'—'} sobre cobrado</span></div>
       <div class="kpi-card ${totalNC>0?'k-blue':'k-green'}"><div class="kpi-label">Ppto No Cobrado</div><div class="kpi-value">${fmt(totalNC)}</div><div class="kpi-sub">${totalNC>0?'pendiente de cobro':'superó el presupuesto'}</div></div>`;
@@ -3177,6 +3227,7 @@ function showApp(){
     // (si todavía no llegó, loadJunio() lo inyecta cuando termine).
     injectLiveMesEnDebitos();
     populateDebMeses();
+    refreshMesLabels();
 
     // Si el tab Débitos ya estaba abierto cuando llegaron los datos, reconstruir
     // (buildDebitosCharts re-captura D y MESES_D, evitando closures desactualizados)
