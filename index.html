@@ -343,6 +343,33 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .deb-reset{margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff;padding:9px 16px;border-radius:11px;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s;font-family:Inter,sans-serif}
 .deb-reset:hover{background:rgba(255,255,255,.24)}
 @media(max-width:600px){.deb-filter-bar{padding:12px}.deb-field{height:38px}.deb-field-grow{min-width:100%;order:5}.deb-reset{margin-left:0;order:6}}
+
+/* ── MULTISELECT DE FINANCIADORES ── */
+.ms-cont{position:relative;flex:1;min-width:120px}
+.ms-btn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:none;background:transparent;color:#1f2a37;font-size:13px;font-family:Inter,sans-serif;font-weight:500;cursor:pointer;padding:9px 2px;outline:none;text-align:left}
+.ms-btn-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9aa6b2}
+.ms-btn-label.on{color:#1f2a37;font-weight:600}
+.ms-caret{color:#64748b;font-size:11px;flex-shrink:0}
+.ms-panel{display:none;position:absolute;top:calc(100% + 8px);left:-11px;width:300px;max-width:80vw;background:#fff;border:1px solid var(--gray-300);border-radius:10px;box-shadow:0 12px 32px rgba(13,27,46,.24);z-index:1000;padding:8px}
+.ms-panel.open{display:block}
+.ms-search{width:100%;border:1px solid var(--gray-300);border-radius:8px;padding:8px 10px;font-size:12px;font-family:Inter,sans-serif;outline:none;color:#1f2a37;margin-bottom:6px}
+.ms-search:focus{border-color:#2563a8;box-shadow:0 0 0 2px rgba(37,99,168,.18)}
+.ms-actions{display:flex;align-items:center;justify-content:space-between;padding:0 2px 6px;border-bottom:1px solid var(--gray-200);margin-bottom:6px}
+.ms-count{font-size:11px;color:var(--gray-500);font-weight:600}
+.ms-clear{border:none;background:#eef2f6;color:#334155;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:Inter,sans-serif}
+.ms-clear:hover{background:#e2e8f0}
+.ms-list{max-height:240px;overflow-y:auto}
+.ms-opt{display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px;cursor:pointer;font-size:12px;color:#374151}
+.ms-opt:hover{background:#f0f4f8}
+.ms-opt input{accent-color:#1a6b5a;width:15px;height:15px;cursor:pointer;flex-shrink:0}
+.ms-opt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-empty{padding:12px;text-align:center;color:var(--gray-500);font-size:12px}
+.ms-chips-bar{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.ms-chips-bar:empty{display:none;margin:0}
+.ms-chip{display:inline-flex;align-items:center;gap:5px;background:#dbeafe;color:#1e40af;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;max-width:240px}
+.ms-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-chip b{cursor:pointer;opacity:.65;font-weight:700;font-size:13px;line-height:1}
+.ms-chip b:hover{opacity:1}
 </style>
 </head>
 <body>
@@ -548,25 +575,16 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
 <div id="page-comparativo" class="page-content">
 <main>
 
-<!-- FILTRO FINANCIADOR COMPARATIVO -->
+<!-- FILTRO FINANCIADOR COMPARATIVO (multiselección) -->
 <div class="deb-filter-bar" style="margin-bottom:14px">
   <div class="deb-fb-title">🔎 Filtrar</div>
   <div class="deb-field deb-field-grow">
     <span class="deb-field-ico">💳</span>
-    <input id="comp-fin-input" class="deb-ctrl deb-ctrl-input" list="comp-fin-list" placeholder="Escribí un financiador…" oninput="onCompFinChange()" autocomplete="off">
-    <datalist id="comp-fin-list"></datalist>
-    <button class="deb-clear" type="button" onclick="clearCompFin()" title="Limpiar financiador">×</button>
+    <div id="comp-fin-ms" class="ms-cont"></div>
   </div>
   <button class="deb-reset" type="button" onclick="clearCompFin()">Limpiar</button>
 </div>
-<div id="comp-fin-badge" style="display:none;margin-bottom:10px">
-  <span style="background:#dbeafe;color:#1e40af;font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;display:inline-flex;align-items:center;gap:6px">
-    <span>💳</span>
-    <span id="comp-fin-badge-name"></span>
-    <span onclick="clearCompFin()" style="cursor:pointer;opacity:.7;font-size:14px;margin-left:2px">×</span>
-  </span>
-  <span style="font-size:11px;color:var(--gray-500);margin-left:8px">— mostrando datos de este financiador</span>
-</div>
+<div id="comp-fin-chips" class="ms-chips-bar"></div>
 
 <div class="sec-title" id="comp-sec-title">KPIs Mensuales — Enero a Mayo 2026</div>
 <div class="chart-card">
@@ -674,12 +692,11 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
     </div>
     <div class="deb-field deb-field-grow">
       <span class="deb-field-ico">🔍</span>
-      <input id="deb-f-fin" class="deb-ctrl deb-ctrl-input" list="deb-fin-list" placeholder="Escribí un financiador…" onchange="onDebFinChange()" autocomplete="off">
-      <datalist id="deb-fin-list"></datalist>
-      <button class="deb-clear" type="button" onclick="clearDebFin()" title="Limpiar financiador">×</button>
+      <div id="deb-fin-ms" class="ms-cont"></div>
     </div>
     <button class="deb-reset" type="button" onclick="resetDebFilters()">Limpiar todo</button>
   </div>
+  <div id="deb-fin-chips" class="ms-chips-bar"></div>
 
   <!-- CAMPO DE CONTROL: Total Facturado (= adeudado) -->
   <div id="deb-control-total" style="margin:10px 0 4px"></div>
@@ -1356,11 +1373,11 @@ function renderTable(rows,reset){
   currentData=[...rows];
   const isDeb=currentTab==='debitos';
   const cols=isDeb
-    ?['Financiador','Comprobante','Fecha Fact.','Fecha Cobro','Importe','Debitado','Estado']
-    :['Financiador','Comprobante','Fecha Fact.','Fecha Cobro','Importe','Estado'];
+    ?['Financiador','Comprobante','Fecha Fact.','Importe','Debitado','Estado']
+    :['Financiador','Comprobante','Fecha Fact.','Importe','Estado'];
   const keys=isDeb
-    ?['financiador','comprobante','fecha_fact','fecha_cobro','adeudado','debitado',null]
-    :['financiador','comprobante','fecha_fact','fecha_cobro','adeudado',null];
+    ?['financiador','comprobante','fecha_fact','adeudado','debitado',null]
+    :['financiador','comprobante','fecha_fact','adeudado',null];
   window._modalColKeys=keys;
   const rightCols=['Importe','Cobrado','Debitado'];
   document.getElementById('modal-thead').innerHTML=`<tr>${cols.map((c,i)=>`<th class="${rightCols.includes(c)?'r':''}" onclick="sortBy(${i})">${c} <span style="opacity:.35;font-size:9px">▲▼</span></th>`).join('')}</tr>`;
@@ -1376,7 +1393,6 @@ function renderTable(rows,reset){
         <td style="max-width:185px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.financiador}">${r.financiador}</td>
         <td style="white-space:nowrap">${r.comprobante}</td>
         <td style="white-space:nowrap;color:var(--gray-500)">${r.fecha_fact||'—'}</td>
-        <td style="white-space:nowrap;color:var(--gray-500)">${r.fecha_cobro||'—'}</td>
         <td class="r">${r.adeudado?fmtN(r.adeudado):'—'}</td>
         <td class="r mv-debitado">${r.debitado?fmtN(Math.abs(r.debitado)):'—'}</td>
         <td>${est}</td>`;
@@ -1385,7 +1401,6 @@ function renderTable(rows,reset){
         <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.financiador}">${r.financiador}</td>
         <td style="white-space:nowrap">${r.comprobante}</td>
         <td style="white-space:nowrap;color:var(--gray-500)">${r.fecha_fact||'—'}</td>
-        <td style="white-space:nowrap;color:var(--gray-500)">${r.fecha_cobro||'—'}</td>
         <td class="r">${r.adeudado?fmtN(r.adeudado):'—'}</td>
         <td>${est}</td>`;
     }
@@ -1409,6 +1424,77 @@ function sortBy(i){
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
+/* ══════════ MultiSel: multiselección reutilizable de financiadores ══════════ */
+const MultiSel = (function(){
+  const I = {};
+  const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function visibleOpts(id){
+    const inst = I[id]; const q = (inst.q||'').toLowerCase();
+    return (inst.getOptions()||[]).filter(o=>!q || o.toLowerCase().includes(q));
+  }
+  function renderChips(id){
+    const inst = I[id]; if(!inst || !inst.chipsId) return;
+    const box = document.getElementById(inst.chipsId); if(!box) return;
+    box.className = 'ms-chips-bar';
+    box.innerHTML = [...inst.sel].map(o=>`<span class="ms-chip" title="${esc(o)}"><span>${esc(o)}</span><b data-rm="${esc(o)}">×</b></span>`).join('');
+  }
+  function render(id){
+    const inst = I[id]; if(!inst) return;
+    const cont = document.getElementById(id); if(!cont) return;
+    cont.classList.add('ms-cont');
+    const list = visibleOpts(id); inst._list = list;
+    const n = inst.sel.size;
+    const label = n===0 ? inst.allLabel : (n===1 ? [...inst.sel][0] : n+' financiadores');
+    cont.innerHTML =
+      `<button type="button" class="ms-btn" data-act="toggle"><span class="ms-btn-label${n?' on':''}">${esc(label)}</span><span class="ms-caret">▾</span></button>`+
+      `<div class="ms-panel${inst.open?' open':''}">`+
+        `<input class="ms-search" placeholder="Buscar financiador…" value="${esc(inst.q||'')}" data-act="search">`+
+        `<div class="ms-actions"><span class="ms-count">${n} seleccionado${n===1?'':'s'}</span><button type="button" class="ms-clear" data-act="clear">Limpiar</button></div>`+
+        `<div class="ms-list">`+
+          (list.length ? list.map((o,i)=>`<label class="ms-opt"><input type="checkbox" data-i="${i}" ${inst.sel.has(o)?'checked':''}><span title="${esc(o)}">${esc(o)}</span></label>`).join('')
+                       : `<div class="ms-empty">Sin resultados</div>`)+
+        `</div>`+
+      `</div>`;
+    renderChips(id);
+  }
+  function fire(id){ try{ I[id].onChange(); }catch(e){ console.warn('MultiSel onChange', e); } }
+  // Delegación de eventos
+  document.addEventListener('click', e=>{
+    const cont = e.target.closest('.ms-cont');
+    Object.keys(I).forEach(id=>{ const c=document.getElementById(id); if(c && I[id].open && c!==cont){ I[id].open=false; render(id); } });
+    const rm = e.target.closest('[data-rm]');
+    if(rm){ const cb=rm.closest('.ms-chips-bar'); const id=Object.keys(I).find(k=>document.getElementById(I[k].chipsId)===cb); if(id){ I[id].sel.delete(rm.dataset.rm); render(id); fire(id); } return; }
+    if(!cont) return;
+    const id = cont.id, inst = I[id]; if(!inst) return;
+    const act = e.target.closest('[data-act]')?.dataset.act;
+    if(act==='toggle'){ inst.open=!inst.open; render(id); if(inst.open){ const s=cont.querySelector('.ms-search'); if(s) s.focus(); } }
+    else if(act==='clear'){ inst.sel.clear(); inst.q=''; render(id); fire(id); }
+  });
+  document.addEventListener('change', e=>{
+    const cb = e.target.closest('.ms-cont .ms-list input[type=checkbox]'); if(!cb) return;
+    const cont = cb.closest('.ms-cont'); const id = cont.id, inst = I[id]; if(!inst) return;
+    const o = inst._list[+cb.dataset.i]; if(o==null) return;
+    if(cb.checked) inst.sel.add(o); else inst.sel.delete(o);
+    render(id); fire(id);
+  });
+  document.addEventListener('input', e=>{
+    const s = e.target.closest('.ms-cont .ms-search'); if(!s) return;
+    const cont = s.closest('.ms-cont'); const id = cont.id, inst = I[id]; if(!inst) return;
+    inst.q = s.value; render(id);
+    const ns = cont.querySelector('.ms-search'); if(ns){ ns.focus(); ns.setSelectionRange(ns.value.length, ns.value.length); }
+  });
+  return {
+    create(id, cfg){
+      if(I[id]){ I[id].getOptions=cfg.getOptions; I[id].onChange=cfg.onChange||I[id].onChange; }
+      else I[id]={sel:new Set(), open:false, q:'', getOptions:cfg.getOptions, onChange:cfg.onChange||(()=>{}), allLabel:cfg.allLabel||'Todos', chipsId:cfg.chipsId||null, _list:[]};
+      render(id);
+    },
+    getSelected(id){ return I[id] ? [...I[id].sel] : []; },
+    clear(id){ if(I[id]){ I[id].sel.clear(); I[id].q=''; render(id); fire(id); } },
+    refresh(id){ if(I[id]) render(id); }
+  };
+})();
+
 let MONTHLY_DATA = {}; // [SUPABASE] Comparativo lee de LIVE_MONTHLY_DATA (datos_inst por mes)
 
 // ── JUNIO EN VIVO ──
@@ -1967,31 +2053,10 @@ const fmtM=n=>{
 const fmtPct=n=>n!=null?n.toFixed(2)+'%':'—';
 
 // ── FILTRO FINANCIADOR COMPARATIVO ──
-let _compFinActivo = '';
+// Financiadores seleccionados en el Comparativo (multiselección)
+function getCompFins(){ return MultiSel.getSelected('comp-fin-ms'); }
 
-function onCompFinChange(){
-  const val = (document.getElementById('comp-fin-input')?.value||'').trim();
-  // Solo aplicar si coincide exactamente con un financiador conocido (o está vacío)
-  const allFins = getAllCompFins();
-  if(!val || allFins.includes(val)){
-    _compFinActivo = val;
-    renderCompConFiltro();
-    // Badge
-    const badge = document.getElementById('comp-fin-badge');
-    const badgeName = document.getElementById('comp-fin-badge-name');
-    if(val && badge && badgeName){ badgeName.textContent = val; badge.style.display='block'; }
-    else if(badge){ badge.style.display='none'; }
-  }
-}
-
-function clearCompFin(){
-  _compFinActivo = '';
-  const inp = document.getElementById('comp-fin-input');
-  if(inp) inp.value = '';
-  const badge = document.getElementById('comp-fin-badge');
-  if(badge) badge.style.display='none';
-  renderCompConFiltro();
-}
+function clearCompFin(){ MultiSel.clear('comp-fin-ms'); }
 
 function getAllCompFins(){
   // Colectar todos los financiadores disponibles en LIVE_FINANC_DATA
@@ -2004,22 +2069,26 @@ function getAllCompFins(){
   return [...fins].sort((a,b)=>a.localeCompare(b,'es'));
 }
 
+// Crea/refresca el multiselección de financiadores del Comparativo
 function populateCompFinList(){
-  const dl = document.getElementById('comp-fin-list');
-  if(!dl || dl.children.length) return;
-  getAllCompFins().forEach(fin=>{
-    const opt = document.createElement('option'); opt.value = fin; dl.appendChild(opt);
+  MultiSel.create('comp-fin-ms', {
+    getOptions: getAllCompFins,
+    onChange: renderCompConFiltro,
+    allLabel: 'Todos los financiadores',
+    chipsId: 'comp-fin-chips'
   });
 }
 
 function buildComparativo(){
-  // Poblar datalist de financiadores (se hace una sola vez)
-  setTimeout(populateCompFinList, 200);
+  populateCompFinList();
   renderCompConFiltro();
 }
 
 function renderCompConFiltro(){
-  const fin = _compFinActivo;
+  const fins = getCompFins();
+  const hasFin = fins.length > 0;
+  const finSet = new Set(fins);
+  const finLabel = fins.length === 1 ? fins[0] : fins.length + ' financiadores';
 
   // Usar LIVE_MONTHLY_DATA (Supabase) si está disponible, sino caer en MONTHLY_DATA hardcodeado
   function getMonthData(mes){ return (LIVE_MONTHLY_DATA && LIVE_MONTHLY_DATA[mes]) || MONTHLY_DATA[mes]; }
@@ -2032,15 +2101,17 @@ function renderCompConFiltro(){
 
   // Obtener totales del mes — con o sin filtro de financiador
   function monthTotal(mes){
-    // Si hay filtro de financiador, usar LIVE_FINANC_DATA para ese mes
-    if(fin){
+    // Si hay filtro de financiador(es), sumar sobre los seleccionados en LIVE_FINANC_DATA
+    if(hasFin){
       const financArr = (LIVE_FINANC_DATA && LIVE_FINANC_DATA[mes]) || [];
-      const d = financArr.find(f=>f.name===fin);
-      if(!d) return {presup:0,cobrado:0,debitado:0,neto:0,nc:0,pct_neto:0,pct_cobrado:0,pct_deb:0};
-      const neto = d.deb_cob || (d.cobrado+d.debitado);
-      const presup = d.presup||0;
-      const cobrado = d.cobrado||0;
-      const debitado = d.debitado||0;
+      let presup=0,cobrado=0,debitado=0,neto=0;
+      financArr.forEach(d=>{
+        if(!finSet.has(d.name)) return;
+        neto     += (d.deb_cob || (d.cobrado+d.debitado)) || 0;
+        presup   += d.presup||0;
+        cobrado  += d.cobrado||0;
+        debitado += d.debitado||0;
+      });
       const nc = presup - neto;
       return {presup, cobrado, debitado, neto, nc,
         pct_neto:   presup ? neto/presup*100 : 0,
@@ -2064,12 +2135,12 @@ function renderCompConFiltro(){
 
   // Para tablas por institución cuando hay filtro de financiador: usar RAW_DATA
   function instDataForFin(mes, inst){
-    if(!fin) return null; // usar path normal
+    if(!hasFin) return null; // usar path normal
     const raw = RAW_DATA[mes] && RAW_DATA[mes][inst];
     if(!raw) return null;
     let presup=0,cobrado=0,debitado=0,neto=0;
     [...(raw.facturas||[]),...(raw.debitos||[])].forEach(r=>{
-      if((r.financiador||'').trim() !== fin) return;
+      if(!finSet.has((r.financiador||'').trim())) return;
       presup   += Math.abs(r.adeudado||0);
       cobrado  += Math.abs(r.cobrado||0);
       debitado += Math.abs(r.debitado||0);
@@ -2080,8 +2151,8 @@ function renderCompConFiltro(){
 
   // Actualizar título de sección
   const secTitle = document.getElementById('comp-sec-title');
-  if(secTitle) secTitle.textContent = fin
-    ? `KPIs Mensuales — ${fin}`
+  if(secTitle) secTitle.textContent = hasFin
+    ? `KPIs Mensuales — ${finLabel}`
     : `KPIs Mensuales — ${months.length ? months[0]+' a '+months[months.length-1]+' 2026' : '2026'}`;
 
   // ── SUMMARY TABLE ──
@@ -2090,7 +2161,7 @@ function renderCompConFiltro(){
 
   // Mostrar/ocultar columna % del Total
   const thPart = document.getElementById('comp-th-participacion');
-  if(thPart) thPart.style.display = fin ? '' : 'none';
+  if(thPart) thPart.style.display = hasFin ? '' : 'none';
 
   // Para calcular % del total por mes: suma deb_cob de TODOS los fins del mes
   function totalFinancMes(mes){
@@ -2111,16 +2182,16 @@ function renderCompConFiltro(){
 
     // % participación en el total de cobranzas del mes
     let partCell = '';
-    if(fin){
+    if(hasFin){
       const totalMes = totalFinancMes(mes);
       const partPct = totalMes > 0 ? t.neto / totalMes * 100 : 0;
       const partColor = partPct >= 20 ? '#1e40af' : partPct >= 10 ? '#1d4ed8' : '#3b82f6';
-      partCell = `<td class="r" style="display:${fin?'':'none'};background:#eff6ff;font-weight:700;color:${partColor}">${partPct.toFixed(1)}%</td>`;
+      partCell = `<td class="r" style="background:#eff6ff;font-weight:700;color:${partColor}">${partPct.toFixed(1)}%</td>`;
     }
 
     const tr = document.createElement('tr');
     tr.innerHTML=`
-      <td><strong>${mes}</strong>${(!fin && getInsts().length===ALL_INSTS.length && t.presup<15e9)?'<span style="font-size:10px;color:#b45309;margin-left:6px">⚠ parcial</span>':''}</td>
+      <td><strong>${mes}</strong>${(!hasFin && getInsts().length===ALL_INSTS.length && t.presup<15e9)?'<span style="font-size:10px;color:#b45309;margin-left:6px">⚠ parcial</span>':''}</td>
       <td class="r">${fmtM(t.presup)}</td>
       <td class="r" style="color:#1a6b5a;font-weight:600">${fmtM(t.neto)}</td>
       <td class="r"><span style="color:${pctColor};font-weight:700">${fmtPct(t.pct_neto)}</span></td>
@@ -2209,10 +2280,10 @@ function renderCompConFiltro(){
   const partWrap = document.getElementById('comp-participacion-wrap');
   const oldPartChart = Chart.getChart('chart-participacion');
   if(oldPartChart) oldPartChart.destroy();
-  if(fin && partWrap){
+  if(hasFin && partWrap){
     partWrap.style.display = 'block';
     const partTitle = document.getElementById('comp-participacion-title');
-    if(partTitle) partTitle.textContent = `% Participación de ${fin} en el Total`;
+    if(partTitle) partTitle.textContent = `% Participación de ${finLabel} en el Total`;
     const partData = months.map(m=>{
       const totalMes = totalFinancMes(m);
       const tFin = monthTotal(m);
@@ -2265,7 +2336,7 @@ function renderCompConFiltro(){
     let prevN=null;
     months.forEach(mes=>{
       let d;
-      if(fin){
+      if(hasFin){
         d = instDataForFin(mes, inst);
       } else {
         const data = getMonthData(mes); d = data ? data[inst] : null;
@@ -2289,7 +2360,7 @@ function renderCompConFiltro(){
       prevN=d.neto;
     });
     card.innerHTML=`
-      <div class="chart-card-head" style="background:${COLORS[ci]}"><h3>${inst}</h3><span>${fin?fin:'cobrado + débitos'}</span></div>
+      <div class="chart-card-head" style="background:${COLORS[ci]}"><h3>${inst}</h3><span>${hasFin?finLabel:'cobrado + débitos'}</span></div>
       <div class="comp-table-wrap"><table class="comp-table">
         <thead><tr><th>Mes</th><th class="r">Presupuestado</th><th class="r">Cobrado+Deb</th><th class="r">% c/Déb</th><th class="r">Cobrado (en $)</th><th class="r">% s/Déb</th><th class="r">Var.</th></tr></thead>
         <tbody>${rows}</tbody>
@@ -2362,17 +2433,15 @@ function buildDebitos(){
   try { if(typeof computeDebitosData === 'function') computeDebitosData(); } catch(e){ console.warn('computeDebitosData', e); }
   // Meses disponibles (cerrados + mes en curso)
   try { populateDebMeses(); } catch(e){ console.warn('populateDebMeses', e); }
-  // Populate financiador search list (datalist)
+  // Multiselección de financiadores (reemplaza el input + datalist)
   const D = DEBITOS_DATA;
-  const dl = document.getElementById('deb-fin-list');
-  if(dl){
-    dl.innerHTML='';
-    [...D.all_fins].sort((a,b)=>a.localeCompare(b)).forEach(fin=>{
-      const opt = document.createElement('option');
-      opt.value = fin;
-      dl.appendChild(opt);
-    });
-  }
+  const getDebFins = () => MultiSel.getSelected('deb-fin-ms'); // [] = todos
+  MultiSel.create('deb-fin-ms', {
+    getOptions: () => [...(DEBITOS_DATA.all_fins||[])].sort((a,b)=>a.localeCompare(b)),
+    onChange: () => { if(typeof window.applyDebFilters === 'function') window.applyDebFilters(); },
+    allLabel: 'Todos los financiadores',
+    chipsId: 'deb-fin-chips'
+  });
   // Wait for DOM to be visible using requestAnimationFrame + small delay
   requestAnimationFrame(()=>{
     requestAnimationFrame(()=>{
@@ -2398,17 +2467,24 @@ function buildDebitosCharts(){
   let debTotalChart=null, debPctChart=null;
   function debSeries(){
     const inst = document.getElementById('deb-inst-ranking')?.value || '';
-    const fin  = document.getElementById('deb-f-fin')?.value || '';
+    const fins = getDebFins();            // [] = todos los financiadores
+    const hasFin = fins.length > 0;
+    const finSet = new Set(fins);
     return MESES_D.map(m=>{
       let deb=0, neto=0;
-      if(!inst && !fin){ const t=D.monthly_total[m]||{deb:0,neto:0}; deb=t.deb; neto=t.neto; }
-      else if(inst && !fin){ const t=(D.monthly_inst[m]&&D.monthly_inst[m][inst])||{deb:0,neto:0}; deb=t.deb; neto=t.neto; }
-      else if(!inst && fin){ const t=(D.all_fins_evo[fin]&&D.all_fins_evo[fin][m])||{deb:0,neto:0}; deb=t.deb; neto=t.neto; }
-      else { // institución + financiador: débito desde RAW; denominador = facturado, fallback cobrado+débito (N/P)
+      if(!inst && !hasFin){ const t=D.monthly_total[m]||{deb:0,neto:0}; deb=t.deb; neto=t.neto; }
+      else if(inst && !hasFin){ const t=(D.monthly_inst[m]&&D.monthly_inst[m][inst])||{deb:0,neto:0}; deb=t.deb; neto=t.neto; }
+      else if(!inst && hasFin){ // suma de los financiadores elegidos
+        fins.forEach(f=>{ const t=(D.all_fins_evo[f]&&D.all_fins_evo[f][m]); if(t){ deb+=t.deb; neto+=t.neto; } });
+      }
+      else { // institución + financiadores: débito desde RAW; denominador = facturado, fallback cobrado+débito (N/P)
         const d = RAW_DATA[m] && RAW_DATA[m][inst];
         let cobDeb = 0;
-        if(d){ d.debitos.forEach(r=>{ if(r.financiador===fin){ deb+=Math.abs(r.debitado||0); cobDeb+=Math.abs(r.debitado||0)+Math.abs(r.cobrado||0); } }); }
-        const fact = ((typeof FACTURADO_DATA!=='undefined' && FACTURADO_DATA && FACTURADO_DATA[m] && FACTURADO_DATA[m][fin]) ? (FACTURADO_DATA[m][fin][inst]||0) : 0);
+        if(d){ d.debitos.forEach(r=>{ if(finSet.has(r.financiador)){ deb+=Math.abs(r.debitado||0); cobDeb+=Math.abs(r.debitado||0)+Math.abs(r.cobrado||0); } }); }
+        let fact = 0;
+        if(typeof FACTURADO_DATA!=='undefined' && FACTURADO_DATA && FACTURADO_DATA[m]){
+          fins.forEach(f=>{ if(FACTURADO_DATA[m][f]) fact += (FACTURADO_DATA[m][f][inst]||0); });
+        }
         neto = fact > 0 ? fact : cobDeb;
       }
       return {m, deb, neto, pct: neto>0?parseFloat((deb/neto*100).toFixed(2)):0};
@@ -2418,14 +2494,16 @@ function buildDebitosCharts(){
   function updateDebSummary(){
     const series = debSeries();
     const inst = document.getElementById('deb-inst-ranking')?.value || '';
-    const fin  = document.getElementById('deb-f-fin')?.value || '';
+    const fins = getDebFins();
     const mes  = document.getElementById('deb-mes-ranking')?.value || '';
     const totalDeb = series.reduce((a,s)=>a+s.deb,0);
     const avgDeb   = totalDeb/series.length;
     const avgPct   = (series.reduce((a,s)=>a+s.pct,0)/series.length).toFixed(2);
     const byDeb    = [...series].sort((a,b)=>b.deb-a.deb);
     const maxM=byDeb[0], minM=byDeb[byDeb.length-1];
-    const finLbl = fin?(fin.length>20?fin.slice(0,20)+'…':fin):'Todos';
+    const finLbl = fins.length===0 ? 'Todos'
+                 : fins.length===1 ? (fins[0].length>20?fins[0].slice(0,20)+'…':fins[0])
+                 : fins.length+' financiadores';
     let kpiHtml;
     if(mes){
       const sm = series.find(s=>s.m===mes)||{deb:0,pct:0};
@@ -2533,7 +2611,8 @@ function buildDebitosCharts(){
   window.renderRanking = function(){
     const mes = document.getElementById('deb-mes-ranking')?.value || '';
     const inst = document.getElementById('deb-inst-ranking')?.value || '';
-    const finFilter = document.getElementById('deb-f-fin')?.value || '';
+    const finFilterArr = getDebFins();
+    const finFilterSet = new Set(finFilterArr);
     document.getElementById('deb-ranking-title').textContent =
       'Financiadores' + (mes?' - '+mes:'') + (inst?' - '+inst:'');
     const subtitleEl = document.getElementById('deb-ranking-chart-subtitle');
@@ -2571,7 +2650,7 @@ function buildDebitosCharts(){
       }
       const pct = totalFact > 0 ? totalDeb/totalFact*100 : 0;
       return {f:fin, deb:Math.round(totalDeb), pct:parseFloat(pct.toFixed(2))};
-    }).filter(d=>d.deb>0 && (!finFilter || d.f===finFilter));
+    }).filter(d=>d.deb>0 && (finFilterArr.length===0 || finFilterSet.has(d.f)));
 
     // Ordenar según la columna elegida
     fins.sort((a,b)=>{
@@ -2629,9 +2708,10 @@ function buildDebitosCharts(){
     const mesIdx = mesName ? MESES_D.indexOf(mesName) : -1;
     const hasMes = mesIdx >= 0;
     const instF = document.getElementById('deb-inst-ranking')?.value || '';
-    const finF  = document.getElementById('deb-f-fin')?.value || '';
+    const finFArr = getDebFins();
+    const finFSet = new Set(finFArr);
     const INST_COLS = instF ? INST_D2.filter(i=>i===instF) : INST_D2;
-    const baseFins  = finF ? D.all_fins.filter(f=>f===finF) : D.all_fins;
+    const baseFins  = finFArr.length ? D.all_fins.filter(f=>finFSet.has(f)) : D.all_fins;
 
     const rows = baseFins.map(fin=>{
       const instPcts = INST_COLS.map(inst=>{
@@ -2697,20 +2777,18 @@ function buildDebitosCharts(){
 
   // Drill-down chart
   let finChart = null;
-  function renderFinChart(fin){
+  function renderFinChart(finsArr){
     if(finChart){finChart.destroy(); finChart=null;}
-    let d;
-    if(fin==='__ALL__'){
-      // Sumar todos los financiadores por mes
-      d={};
-      MESES_D.forEach(m=>{
-        let deb=0, neto=0;
-        D.all_fins.forEach(f=>{ const e=D.all_fins_evo[f]?.[m]; if(e){ deb+=e.deb; neto+=e.neto; } });
-        d[m]={deb, neto, pct: neto>0? parseFloat((deb/neto*100).toFixed(2)) : 0};
-      });
-    } else {
-      d = D.all_fins_evo[fin];
-    }
+    // finsArr: [] o '__ALL__' = todos; array con 1+ = suma de los elegidos
+    const selFins = (!finsArr || finsArr==='__ALL__' || (Array.isArray(finsArr)&&finsArr.length===0))
+      ? D.all_fins
+      : (Array.isArray(finsArr)?finsArr:[finsArr]);
+    const d={};
+    MESES_D.forEach(m=>{
+      let deb=0, neto=0;
+      selFins.forEach(f=>{ const e=D.all_fins_evo[f]?.[m]; if(e){ deb+=e.deb; neto+=e.neto; } });
+      d[m]={deb, neto, pct: neto>0? parseFloat((deb/neto*100).toFixed(2)) : 0};
+    });
     if(!d) return;
     finChart = new Chart(document.getElementById('deb-chart-fin'),{
       type:'line',
@@ -2736,30 +2814,30 @@ function buildDebitosCharts(){
     updateDebSummary();
     renderRanking();
     renderHeatmap();
-    const fin = document.getElementById('deb-f-fin')?.value || '';
-    renderFinChart(fin || '__ALL__');
+    const fins = getDebFins();
+    renderFinChart(fins);
+    const finLabel = fins.length===0 ? 'TODOS los financiadores'
+                   : fins.length===1 ? fins[0]
+                   : fins.length+' financiadores';
     const t = document.getElementById('deb-fin-chart-title');
-    if(t) t.textContent = 'Tendencia mensual — ' + (fin || 'TODOS los financiadores');
-    if(fin) showDebDetail(fin); // si hay financiador elegido, abrir su detalle
+    if(t) t.textContent = 'Tendencia mensual — ' + finLabel;
+    if(fins.length) showDebDetail(fins); // detalle de los financiadores elegidos
+    else { // sin selección: limpiar el panel de detalle
+      const empty=document.getElementById('deb-detail-empty'), wrap=document.getElementById('deb-detail-wrap');
+      if(empty){ empty.style.display='block'; empty.innerHTML='<div style="font-size:13px;color:var(--gray-500)">Hacé click en un financiador del ranking para ver sus comprobantes debitados</div>'; }
+      if(wrap) wrap.style.display='none';
+    }
   };
   window.resetDebFilters = function(){
-    ['deb-inst-ranking','deb-mes-ranking','deb-f-fin'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+    ['deb-inst-ranking','deb-mes-ranking'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+    MultiSel.clear('deb-fin-ms'); // dispara applyDebFilters vía onChange
     applyDebFilters();
   };
   window.onDebFinChange = function(){
-    const el = document.getElementById('deb-f-fin');
-    const v = (el.value||'').trim();
-    if(v){
-      const lo = v.toLowerCase();
-      const exact = D.all_fins.find(f=>f.toLowerCase()===lo);
-      const partial = exact || D.all_fins.find(f=>f.toLowerCase().includes(lo));
-      el.value = partial || ''; // si no coincide con ninguno, limpia y muestra todos
-    }
     applyDebFilters();
   };
   window.clearDebFin = function(){
-    const el = document.getElementById('deb-f-fin'); if(el) el.value='';
-    applyDebFilters();
+    MultiSel.clear('deb-fin-ms'); // dispara applyDebFilters vía onChange
   };
   applyDebFilters();
 }
@@ -2771,6 +2849,11 @@ window.showDebDetail = function(financiador){
   const tbody = document.getElementById('deb-detail-tbody');
   const title = document.getElementById('deb-detail-title');
   const footer = document.getElementById('deb-detail-footer');
+
+  // Acepta un financiador (click en el ranking) o varios (filtro multiselección)
+  const finArr = Array.isArray(financiador) ? financiador : [financiador];
+  const finSet = new Set(finArr);
+  const finLbl = finArr.length===1 ? finArr[0] : finArr.length+' financiadores';
 
   const mesFilter = document.getElementById('deb-mes-ranking')?.value || '';
   const instFilter = document.getElementById('deb-inst-ranking')?.value || '';
@@ -2787,19 +2870,19 @@ window.showDebDetail = function(financiador){
       const d = RAW_DATA[mes][inst];
       if(!d) return;
       d.debitos.forEach(r=>{
-        if(r.financiador === financiador) rows.push({...r, inst, mes});
+        if(finSet.has(r.financiador)) rows.push({...r, inst, mes});
       });
     });
   });
 
   const mesLabel = mesFilter || 'todos los meses';
   const instLabel = instFilter ? ' - '+instFilter : '';
-  title.textContent = financiador + ' ('+mesLabel+instLabel+')';
+  title.textContent = finLbl + ' ('+mesLabel+instLabel+')';
 
   if(!rows.length){
     empty.style.display='block';
     wrap.style.display='none';
-    empty.innerHTML=`<div style="font-size:24px;margin-bottom:8px">📭</div><div style="font-size:13px;color:var(--gray-500)">No hay comprobantes debitados para <strong>${financiador}</strong>${instFilter?' en '+instFilter:''} ${mesFilter?'en '+mesFilter:'en los meses disponibles'}</div>`;
+    empty.innerHTML=`<div style="font-size:24px;margin-bottom:8px">📭</div><div style="font-size:13px;color:var(--gray-500)">No hay comprobantes debitados para <strong>${finLbl}</strong>${instFilter?' en '+instFilter:''} ${mesFilter?'en '+mesFilter:'en los meses disponibles'}</div>`;
     return;
   }
 
