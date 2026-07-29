@@ -2542,7 +2542,6 @@ function buildDebitos(){
   try { populateDebMeses(); } catch(e){ console.warn('populateDebMeses', e); }
   // Multiselección de financiadores (reemplaza el input + datalist)
   const D = DEBITOS_DATA;
-  const getDebFins = () => MultiSel.getSelected('deb-fin-ms'); // [] = todos
   MultiSel.create('deb-fin-ms', {
     getOptions: () => [...(DEBITOS_DATA.all_fins||[])].sort((a,b)=>a.localeCompare(b)),
     onChange: () => { if(typeof window.applyDebFilters === 'function') window.applyDebFilters(); },
@@ -2559,6 +2558,7 @@ function buildDebitos(){
 function buildDebitosCharts(){
   const D = DEBITOS_DATA;
   const MESES_D = D.meses;
+  const getDebFins = () => MultiSel.getSelected('deb-fin-ms'); // [] = todos los financiadores
 
   const chartOpts = {
     responsive:true,
