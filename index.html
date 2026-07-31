@@ -1144,7 +1144,7 @@ function buildMesAnterior(instData, financData){
   const cobrado  = instList.reduce((s,d)=>s+d.cobrado,0);
   const debitado = instList.reduce((s,d)=>s+d.debitado,0);
   const pctNeto = presup ? neto/presup*100 : 0;
-  const pctCob  = presup ? cobrado/presup*100 : 0;
+  const pctCobKpi = presup ? cobrado/presup*100 : 0;
   const pctDeb  = neto ? debitado/neto*100 : 0;
   const fmtM1 = n=>Math.round(n||0).toLocaleString('es-AR');
   const pc = x=>parseFloat(x).toFixed(2).replace('.',',');
@@ -1153,7 +1153,7 @@ function buildMesAnterior(instData, financData){
   set('kpi-neto','$'+fmtM1(neto));
   set('kpi-pct',pc(pctNeto)+'%');
   set('kpi-cobrado','$'+fmtM1(cobrado));
-  set('kpi-cobrado-badge',pc(pctCob)+'% del ppto (sin débitos)');
+  set('kpi-cobrado-badge',pc(pctCobKpi)+'% del ppto (sin débitos)');
   set('kpi-deb','$'+fmtM1(debitado));
   set('kpi-deb-badge',pc(pctDeb)+'% sobre cobrado');
 
