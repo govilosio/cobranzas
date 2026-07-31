@@ -378,6 +378,39 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
 .ms-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ms-chip b{cursor:pointer;opacity:.65;font-weight:700;font-size:13px;line-height:1}
 .ms-chip b:hover{opacity:1}
+
+/* ── Exportar: botones Excel / PDF ── */
+.xls-btn{display:inline-flex;align-items:center;gap:4px;background:#107c41;color:#fff;border:none;border-radius:4px;padding:4px 9px;font-size:10px;font-weight:600;cursor:pointer;letter-spacing:.3px;white-space:nowrap;transition:opacity .15s}
+.xls-btn:hover{opacity:.85}
+.xls-btn.mini{padding:3px 8px;font-size:9px}
+.exp-bar{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:10px 28px 0;flex-wrap:wrap}
+.pdf-btn{display:inline-flex;align-items:center;gap:4px;background:#b91c1c;color:#fff;border:none;border-radius:4px;padding:4px 9px;font-size:10px;font-weight:600;cursor:pointer;letter-spacing:.3px;white-space:nowrap;transition:opacity .15s}
+.pdf-btn:hover{opacity:.85}
+.exp-bar-label{font-size:10px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.8px;margin-right:auto}
+#print-header{display:none}
+
+/* ── Informe PDF (Imprimir → Guardar como PDF) ── */
+@media print{
+  header,.page-tabs,.nav-tabs,.exp-bar,.xls-btn,.pdf-btn,.no-print,
+  .inst-btn-row,.filter-label,.modal-overlay,.mf-input,#junio-update{display:none !important}
+  .page-content{display:none !important}
+  .page-content.active{display:block !important}
+  body{background:#fff !important;padding:0 !important;margin:0 !important}
+  #print-header{display:block !important;padding:0 0 10px;border-bottom:2px solid #1e3a5f;margin-bottom:12px}
+  #print-header .ph-t{font-size:16px;font-weight:700;color:#1e3a5f}
+  #print-header .ph-s{font-size:11px;color:#555;margin-top:2px}
+  /* Abrir todos los contenedores con scroll para que impriman completos */
+  [style*="max-height"]{max-height:none !important;overflow:visible !important}
+  [style*="overflow-y"],[style*="overflow-x"]{overflow:visible !important}
+  .tc{break-inside:avoid;page-break-inside:avoid;box-shadow:none !important}
+  .sec-title{break-after:avoid;page-break-after:avoid}
+  table{font-size:8.5px !important;width:100% !important}
+  th,td{padding:3px 5px !important}
+  thead{display:table-header-group}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  canvas,img{max-width:100% !important;height:auto !important}
+  @page{size:A4 landscape;margin:10mm}
+}
 </style>
 </head>
 <body>
@@ -411,6 +444,19 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
   <div class="page-tab" onclick="switchPage('debitos')">⚠️ Análisis Débitos</div>
   <div class="page-tab" onclick="switchPage('responsables')">👤 Responsables</div>
   <div class="page-tab iap-tabel" onclick="switchPage('iapos')" style="display:none">🏥 IAPOS</div>
+</div>
+
+<!-- Encabezado que sólo aparece al imprimir / generar el PDF -->
+<div id="print-header">
+  <div class="ph-t">Grupo Oroño — Panel de Gestión de Cobranzas</div>
+  <div class="ph-s" id="print-header-sub"></div>
+</div>
+
+<!-- Barra de exportación -->
+<div class="exp-bar no-print">
+  <span class="exp-bar-label" id="exp-bar-label"></span>
+  <button class="xls-btn" onclick="exportPageXLSX()">⬇ Excel (toda la pestaña)</button>
+  <button class="pdf-btn" onclick="printInforme()">🖨 Informe PDF</button>
 </div>
 
 <div id="page-mensual" class="page-content">
@@ -489,6 +535,7 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
     <table style="width:100%;border-collapse:collapse">
       <thead style="position:sticky;top:0;z-index:5"><tr>
         <th style="background:var(--navy);padding:8px 12px;color:rgba(255,255,255,.8);text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.8px">Financiador</th>
+        <th class="r" title="Participación del financiador sobre el total presupuestado" style="background:var(--navy);padding:8px 12px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px">% Part.</th>
         <th class="r" style="background:var(--navy);padding:8px 12px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px">Presupuestado</th>
         <th class="r" style="background:var(--navy);padding:8px 12px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px">Cobrado + Débitos</th>
         <th class="r" style="background:var(--navy);padding:8px 12px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px">Cobrado (en $)</th>
@@ -566,13 +613,14 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
         <div style="max-height:580px;overflow-y:auto">
           <table id="junio-fin-table" style="width:100%;border-collapse:collapse"><thead style="position:sticky;top:0;z-index:5"><tr>
             <th onclick="sortJunioFin(0)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Financiador ⇅</th>
-            <th class="r" onclick="sortJunioFin(1)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Presupuestado ⇅</th>
-            <th class="r" onclick="sortJunioFin(2)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Cobrado + Débitos ⇅</th>
-            <th class="r" onclick="sortJunioFin(3)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Cobrado (en $) ⇅</th>
-            <th class="r" onclick="sortJunioFin(4)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Débitos ⇅</th>
-            <th class="r" onclick="sortJunioFin(5)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">% Deb. ⇅</th>
-            <th class="r" onclick="sortJunioFin(6)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Ppto No Cob. ⇅</th>
-            <th class="r" onclick="sortJunioFin(7)" title="(Cobrado + Débitos) / Presupuestado" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">% Cobrado ⇅</th>
+            <th class="r" onclick="sortJunioFin(1)" title="Participación del financiador sobre el total presupuestado" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">% Part. ⇅</th>
+            <th class="r" onclick="sortJunioFin(2)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Presupuestado ⇅</th>
+            <th class="r" onclick="sortJunioFin(3)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Cobrado + Débitos ⇅</th>
+            <th class="r" onclick="sortJunioFin(4)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Cobrado (en $) ⇅</th>
+            <th class="r" onclick="sortJunioFin(5)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Débitos ⇅</th>
+            <th class="r" onclick="sortJunioFin(6)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">% Deb. ⇅</th>
+            <th class="r" onclick="sortJunioFin(7)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Ppto No Cob. ⇅</th>
+            <th class="r" onclick="sortJunioFin(8)" title="(Cobrado + Débitos) / Presupuestado" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">% Cobrado ⇅</th>
           </tr></thead>
           <tbody id="junio-fin-tbody"></tbody></table></div>
         </div>
@@ -986,7 +1034,10 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
   <div class="modal">
     <div class="modal-head">
       <h2 id="modal-title">Detalle</h2>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="xls-btn mini" onclick="exportModalXLSX()">⬇ Excel</button>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
     </div>
     <div class="modal-tabs">
       <button class="tab-btn active" id="tab-fact" onclick="switchTab('facturas')">📄 Facturas (<span id="cnt-fact">0</span>)</button>
@@ -1113,6 +1164,13 @@ function pctCobBadge(p){
   const v = isFinite(p) ? p : 0;
   const cls = v>=100 ? 'pct-hi' : v>=90 ? 'pct-ok' : v>=75 ? 'pct-warn' : 'pct-bad';
   return `<span class="${cls}">${v.toFixed(2)}%</span>`;
+}
+
+// % de participacion del financiador sobre el total presupuestado del mes
+function pctPart(presup, totalPresup){ return totalPresup>0 ? presup/totalPresup*100 : 0; }
+function pctPartBadge(p){
+  const v = isFinite(p) ? p : 0;
+  return `<span style="font-weight:600;color:#334155;background:#e2e8f0;padding:2px 7px;border-radius:3px;font-size:11px">${v.toFixed(2)}%</span>`;
 }
 
 // Inst buttons — ahora filtran toda la hoja (BI). Las filas de la tabla siguen abriendo el detalle.
@@ -1270,6 +1328,8 @@ function buildMesAnterior(instData, financData){
       finList2=Object.values(agg).map(d=>({...d,deb_cob:d.cobrado+d.debitado}));
       finList2.sort((a,b)=>b.deb_cob-a.deb_cob);
     }
+    // Total presupuestado de financiadores (base del % de participacion)
+    const totPresupFin = finList2.reduce((s,d)=>s+(d.presup||0),0);
     finList2.forEach(d=>{
       const deb_cob=d.deb_cob||(d.cobrado+d.debitado);
       const pd=pctOf(d.debitado,d.cobrado);
@@ -1284,6 +1344,7 @@ function buildMesAnterior(instData, financData){
       }
       tr.innerHTML=`
         <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.name}">${d.name}</td>
+        <td class="r">${pctPartBadge(pctPart(d.presup, totPresupFin))}</td>
         <td class="r">${fmtFull(d.presup)}</td>
         <td class="r cell-green">${fmtFull(deb_cob)}</td>
         <td class="r">${fmtFull(d.cobrado)}</td>
@@ -1794,7 +1855,12 @@ async function loadJunio(){
       nc:d.presup-d.neto, pd:d.neto?d.debitado/d.neto*100:0,
       pc:pctCob(d.neto, d.presup)
     }));
-    window._junioFinSort = {col:1, asc:false};
+    // % de participacion sobre el total presupuestado del mes
+    {
+      const totPresupFinJ = window._junioFinData.reduce((s,d)=>s+(d.presup||0),0);
+      window._junioFinData.forEach(d=>{ d.part = pctPart(d.presup, totPresupFinJ); });
+    }
+    window._junioFinSort = {col:2, asc:false};
     document.getElementById('junio-fin-count').textContent = `(${window._junioFinData.length} financiadores)`;
     renderJunioFin();
     setTimeout(()=>makeSortable('junio-inst-tbody'),50);
@@ -1817,7 +1883,7 @@ let junioData = {};
 function renderJunioFin(){
   const data = window._junioFinData || [];
   const {col, asc} = window._junioFinSort;
-  const keys = ['fin','presup','neto','cobrado','debitado','pd','nc','pc'];
+  const keys = ['fin','part','presup','neto','cobrado','debitado','pd','nc','pc'];
   const sorted = [...data].sort((a,b)=>{
     const av=a[keys[col]], bv=b[keys[col]];
     if(typeof av==='string') return asc?av.localeCompare(bv):bv.localeCompare(av);
@@ -1835,6 +1901,7 @@ function renderJunioFin(){
     tr.onclick=()=>openJunioFinModal(d.fin);
     tr.innerHTML=`
       <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.fin}">${d.fin}</td>
+      <td class="r">${pctPartBadge(d.part)}</td>
       <td class="r">${fmtFull(d.presup)}</td>
       <td class="r cell-green">${fmtFull(d.neto)}</td>
       <td class="r">${fmtFull(d.cobrado)}</td>
@@ -4189,6 +4256,193 @@ async function saveConfig(id, prefix='cfg-'){
 
   window.loadIapos=loadIapos;
   window.IAP={onPeriodo:onPeriodo,renderMatriz:renderMatriz,toggleSort:toggleSort};
+})();
+</script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   EXPORTACIÓN — Excel (SheetJS, ya cargado) e Informe PDF (print)
+   ══════════════════════════════════════════════════════════════ */
+(function(){
+
+  // ── Texto de celda -> número cuando corresponde (formato es-AR) ──
+  function cellVal(txt){
+    let s = (txt==null?'':String(txt)).replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
+    if(!s || s==='—' || s==='-' || s==='–') return '';
+    const neg  = /^\(.*\)$/.test(s) || /^-/.test(s.replace(/^\$\s*/,''));
+    let mult = 1;
+    if(/\bM$/.test(s)) mult = 1e6;
+    else if(/\bK$/.test(s)) mult = 1e3;
+    let c = s.replace(/[()\$\s%+]/g,'').replace(/[MK]$/,'').replace(/^-/,'');
+    c = c.replace(/\./g,'').replace(',', '.');
+    if(c === '' || !/^\d+(\.\d+)?$/.test(c)) return s;   // no es número: dejar texto
+    let n = parseFloat(c) * mult;
+    return neg ? -n : n;
+  }
+
+  // ── Tabla HTML -> matriz (respeta filas ocultas por filtro) ──
+  function tableAOA(table){
+    const aoa = [];
+    table.querySelectorAll('tr').forEach(tr=>{
+      if(tr.style.display === 'none') return;
+      const cells = Array.from(tr.children).filter(c=>c.tagName==='TH'||c.tagName==='TD');
+      if(!cells.length) return;
+      aoa.push(cells.map(c => cellVal(c.innerText)));
+    });
+    return aoa;
+  }
+
+  function clean(s){
+    return (s||'').replace(/[\u{1F300}-\u{1FAFF}\u{2190}-\u{27BF}\u{FE0F}]/gu,'')
+                  .replace(/⇅|↑|↓/g,'').replace(/\s+/g,' ').trim();
+  }
+  const sheetSafe = s => (clean(s).replace(/[\[\]\*\?\/\\:]/g,'-').slice(0,28) || 'Hoja');
+  const fileSafe  = s => (clean(s).replace(/[^\wáéíóúñÁÉÍÓÚÑ -]/g,'').replace(/\s+/g,'_') || 'tabla');
+  function stamp(){
+    const d = new Date(), p = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+  }
+
+  // ── Nombre legible de la tabla: título del panel o sec-title anterior ──
+  function tableName(table, idx){
+    const tc = table.closest('.tc');
+    const h  = tc && tc.querySelector('.tc-head h3');
+    if(h && clean(h.textContent)) return clean(h.textContent);
+    let node = tc || table;
+    while(node && node !== document.body){
+      let p = node.previousElementSibling;
+      while(p){
+        if(p.classList && p.classList.contains('sec-title')) return clean(p.textContent);
+        const st = p.querySelector && p.querySelector('.sec-title');
+        if(st) return clean(st.textContent);
+        p = p.previousElementSibling;
+      }
+      node = node.parentElement;
+    }
+    return 'Tabla ' + (idx+1);
+  }
+
+  function autoWidth(aoa){
+    const w = [];
+    aoa.forEach(row => row.forEach((v,i)=>{
+      const len = String(v==null?'':v).length;
+      w[i] = Math.min(42, Math.max(w[i]||10, len+2));
+    }));
+    return w.map(x=>({wch:x}));
+  }
+
+  function sheetFromTable(table){
+    const aoa = tableAOA(table);
+    if(!aoa.length) return null;
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = autoWidth(aoa);
+    return ws;
+  }
+
+  // ── Descargar UNA tabla ──
+  window.exportTableXLSX = function(table, name){
+    try{
+      const ws = sheetFromTable(table);
+      if(!ws){ alert('La tabla todavía no tiene datos.'); return; }
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, sheetSafe(name));
+      XLSX.writeFile(wb, fileSafe(name) + '_' + stamp() + '.xlsx');
+    }catch(e){ console.error(e); alert('No se pudo generar el Excel: ' + e.message); }
+  };
+
+  // ── Descargar TODAS las tablas de la pestaña activa (una hoja c/u) ──
+  window.exportPageXLSX = function(){
+    try{
+      const page = document.querySelector('.page-content.active');
+      if(!page){ alert('No hay pestaña activa.'); return; }
+      const tabs  = document.querySelector('.page-tab.active');
+      const pName = clean(tabs ? tabs.textContent.replace(/EN VIVO/i,'') : 'Panel') || 'Panel';
+      const wb = XLSX.utils.book_new();
+      const used = {};
+      let n = 0;
+      page.querySelectorAll('table').forEach((t,i)=>{
+        const ws = sheetFromTable(t);
+        if(!ws) return;
+        let nm = sheetSafe(tableName(t,i));
+        if(used[nm]){ used[nm]++; nm = sheetSafe(nm + ' ' + used[nm]); } else { used[nm] = 1; }
+        XLSX.utils.book_append_sheet(wb, ws, nm);
+        n++;
+      });
+      if(!n){ alert('Esta pestaña no tiene tablas con datos todavía.'); return; }
+      XLSX.writeFile(wb, 'Cobranzas_' + fileSafe(pName) + '_' + stamp() + '.xlsx');
+    }catch(e){ console.error(e); alert('No se pudo generar el Excel: ' + e.message); }
+  };
+
+  // ── Descargar el detalle abierto en el modal ──
+  window.exportModalXLSX = function(){
+    const t = document.querySelector('#modal .modal-table');
+    if(!t){ alert('No hay detalle abierto.'); return; }
+    const titulo = clean((document.getElementById('modal-title')||{}).textContent) || 'Detalle';
+    const tab = document.querySelector('#modal .tab-btn.active');
+    const sufijo = tab ? ' - ' + clean(tab.textContent).replace(/\(\d+\)/,'').trim() : '';
+    window.exportTableXLSX(t, titulo + sufijo);
+  };
+
+  // ── Botón ⬇ Excel en cada tabla ──
+  function injectTableExportButtons(){
+    document.querySelectorAll('.page-content table').forEach((t,i)=>{
+      if(t.dataset.expBtn) return;
+      t.dataset.expBtn = '1';
+      const name = tableName(t, i);
+      const btn = document.createElement('button');
+      btn.className = 'xls-btn mini no-print';
+      btn.textContent = '⬇ Excel';
+      btn.title = 'Descargar esta tabla en Excel';
+      btn.onclick = e => { e.stopPropagation(); window.exportTableXLSX(t, name); };
+      const tc   = t.closest('.tc');
+      const head = tc && tc.querySelector('.tc-head');
+      if(head){
+        head.appendChild(btn);
+      } else {
+        const bar = document.createElement('div');
+        bar.className = 'no-print';
+        bar.style.cssText = 'display:flex;justify-content:flex-end;padding:4px 0';
+        bar.appendChild(btn);
+        (t.parentElement || t).insertBefore(bar, t);
+      }
+    });
+  }
+
+  // ── Informe PDF: usa el diálogo de impresión → "Guardar como PDF" ──
+  window.printInforme = function(){
+    const tab   = document.querySelector('.page-tab.active') || document.querySelector('.mbn-tab.active');
+    const nombre = clean(tab ? tab.textContent.replace(/EN VIVO/i,'') : 'Informe') || 'Informe';
+    const sub = document.getElementById('print-header-sub');
+    if(sub) sub.textContent = nombre + ' · Generado el ' + new Date().toLocaleString('es-AR');
+    const prev = document.title;
+    document.title = 'Panel Cobranzas - ' + nombre;
+    // Las tablas con scroll se abren solas por CSS; damos un respiro al layout
+    setTimeout(()=>{
+      window.print();
+      setTimeout(()=>{ document.title = prev; }, 1500);
+    }, 120);
+  };
+
+  // ── Etiqueta de la barra + re-inyección al cambiar de pestaña ──
+  function refreshExpBar(){
+    const tab = document.querySelector('.page-tab.active') || document.querySelector('.mbn-tab.active');
+    const el = document.getElementById('exp-bar-label');
+    if(el) el.textContent = 'Exportar — ' + (clean(tab ? tab.textContent.replace(/EN VIVO/i,'') : '') || 'panel');
+  }
+
+  function run(){ injectTableExportButtons(); refreshExpBar(); }
+
+  window.addEventListener('load', ()=>{
+    run();
+    // Las pestañas construyen sus tablas por JS: re-inyectar cuando aparecen
+    let t = null;
+    const mo = new MutationObserver(()=>{ clearTimeout(t); t = setTimeout(run, 300); });
+    document.querySelectorAll('.page-content').forEach(p=>mo.observe(p,{childList:true, subtree:true}));
+    document.addEventListener('click', e=>{
+      if(e.target.closest && e.target.closest('.page-tab, .mbn-tab')) setTimeout(run, 350);
+    }, true);
+  });
+
 })();
 </script>
 
