@@ -538,11 +538,11 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
         <th class="r" title="Participación del financiador sobre el total presupuestado" style="background:var(--navy);padding:8px 12px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px">% Part.</th>
         <th class="r" style="background:var(--navy);padding:8px 12px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px">Presupuestado</th>
         <th class="r" style="background:var(--navy);padding:8px 12px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px">Cobrado + Débitos</th>
+        <th class="r" title="(Cobrado + Débitos) / Presupuestado" style="background:var(--navy);padding:8px 12px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px">% Cobrado</th>
         <th class="r" style="background:var(--navy);padding:8px 12px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px">Cobrado (en $)</th>
         <th class="r" style="background:var(--navy);padding:8px 12px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px">Débitos</th>
         <th class="r" style="background:var(--navy);padding:8px 12px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px">% Deb.</th>
         <th class="r" style="background:var(--navy);padding:8px 12px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px">Ppto No Cobrado</th>
-        <th class="r" title="(Cobrado + Débitos) / Presupuestado" style="background:var(--navy);padding:8px 12px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px">% Cobrado</th>
       </tr></thead>
       <tbody id="fin-tbody"></tbody>
     </table>
@@ -603,11 +603,11 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
           <th>Institución</th>
           <th class="r">Presupuestado</th>
           <th class="r">Cobrado + Débitos</th>
+          <th class="r" title="(Cobrado + Débitos) / Presupuestado">% Cobrado</th>
           <th class="r">Cobrado (en $)</th>
           <th class="r">Débitos</th>
           <th class="r">% Deb.</th>
           <th class="r">Ppto No Cob.</th>
-          <th class="r" title="(Cobrado + Débitos) / Presupuestado">% Cobrado</th>
         </tr></thead>
         <tbody id="junio-inst-tbody"></tbody></table>
       </div>
@@ -626,11 +626,11 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
             <th class="r" onclick="sortJunioFin(1)" title="Participación del financiador sobre el total presupuestado" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">% Part. ⇅</th>
             <th class="r" onclick="sortJunioFin(2)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Presupuestado ⇅</th>
             <th class="r" onclick="sortJunioFin(3)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Cobrado + Débitos ⇅</th>
-            <th class="r" onclick="sortJunioFin(4)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Cobrado (en $) ⇅</th>
-            <th class="r" onclick="sortJunioFin(5)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Débitos ⇅</th>
-            <th class="r" onclick="sortJunioFin(6)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">% Deb. ⇅</th>
-            <th class="r" onclick="sortJunioFin(7)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Ppto No Cob. ⇅</th>
-            <th class="r" onclick="sortJunioFin(8)" title="(Cobrado + Débitos) / Presupuestado" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">% Cobrado ⇅</th>
+            <th class="r" onclick="sortJunioFin(4)" title="(Cobrado + Débitos) / Presupuestado" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">% Cobrado ⇅</th>
+            <th class="r" onclick="sortJunioFin(5)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Cobrado (en $) ⇅</th>
+            <th class="r" onclick="sortJunioFin(6)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Débitos ⇅</th>
+            <th class="r" onclick="sortJunioFin(7)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">% Deb. ⇅</th>
+            <th class="r" onclick="sortJunioFin(8)" style="cursor:pointer;background:var(--navy);padding:8px 13px;color:rgba(255,255,255,.8);font-size:10px;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap">Ppto No Cob. ⇅</th>
           </tr></thead>
           <tbody id="junio-fin-tbody"></tbody></table></div>
         </div>
@@ -1367,11 +1367,11 @@ function buildMesAnterior(instData, financData){
         <td class="r">${pctPartBadge(pctPart(d.presup, totPresupFin))}</td>
         <td class="r">${fmtFull(d.presup)}</td>
         <td class="r cell-green">${fmtFull(deb_cob)}</td>
+        <td class="r">${pctCobBadge(pctCob(deb_cob, d.presup))}</td>
         <td class="r">${fmtFull(d.cobrado)}</td>
         <td class="r cell-navy-light">${fmtFull(d.debitado)}</td>
         <td class="r">${pctBadge(pd)}</td>
-        <td class="r ${ncClass}">${fmtFull(nc)}</td>
-        <td class="r">${pctCobBadge(pctCob(deb_cob, d.presup))}</td>`;
+        <td class="r ${ncClass}">${fmt(nc)}</td>`;
       ftbody.appendChild(tr);
     });
     makeSortable('fin-tbody');
@@ -1880,11 +1880,11 @@ async function loadJunio(){
         <td><span class="ib">${inst}</span></td>
         <td class="r">${fmtFull(d.presup)}</td>
         <td class="r cell-green">${fmtFull(d.neto)}</td>
+        <td class="r">${pctCobBadge(pctCob(d.neto, d.presup))}</td>
         <td class="r">${fmtFull(d.cobrado)}</td>
         <td class="r cell-navy-light">${fmtFull(d.debitado)}</td>
         <td class="r">${pctBadge(pd)}</td>
-        <td class="r ${nc<=0?'cell-green':'cell-brown'}">${fmtFull(nc)}</td>
-        <td class="r">${pctCobBadge(pctCob(d.neto, d.presup))}</td>`;
+        <td class="r ${nc<=0?'cell-green':'cell-brown'}">${fmt(nc)}</td>`;
       tbody.appendChild(tr);
       ncData.push({name:inst,val:nc});
     });
@@ -1953,7 +1953,7 @@ let junioData = {};
 function renderJunioFin(){
   const data = window._junioFinData || [];
   const {col, asc} = window._junioFinSort;
-  const keys = ['fin','part','presup','neto','cobrado','debitado','pd','nc','pc'];
+  const keys = ['fin','part','presup','neto','pc','cobrado','debitado','pd','nc'];
   const sorted = [...data].sort((a,b)=>{
     const av=a[keys[col]], bv=b[keys[col]];
     if(typeof av==='string') return asc?av.localeCompare(bv):bv.localeCompare(av);
@@ -1974,11 +1974,11 @@ function renderJunioFin(){
       <td class="r">${pctPartBadge(d.part)}</td>
       <td class="r">${fmtFull(d.presup)}</td>
       <td class="r cell-green">${fmtFull(d.neto)}</td>
+      <td class="r">${pctCobBadge(d.pc)}</td>
       <td class="r">${fmtFull(d.cobrado)}</td>
       <td class="r cell-navy-light">${fmtFull(d.debitado)}</td>
       <td class="r">${pctBadge(d.pd)}</td>
-      <td class="r ${d.nc<=0?'cell-green':'cell-brown'}">${fmtFull(d.nc)}</td>
-      <td class="r">${pctCobBadge(d.pc)}</td>`;
+      <td class="r ${d.nc<=0?'cell-green':'cell-brown'}">${fmt(d.nc)}</td>`;
     tbody.appendChild(tr);
   });
 }
