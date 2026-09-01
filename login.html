@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grupo Oroño — Ingresar</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1b2e;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif}
+.card{background:#192840;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:40px 36px;width:min(92vw,400px);box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.logo{text-align:center;margin-bottom:28px}
+.logo-circle{width:52px;height:52px;background:#0e7c7b;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-weight:700;font-size:18px;color:#fff}
+.logo-name{font-size:20px;font-weight:700;color:#fff;letter-spacing:.5px}
+.logo-sub{font-size:12px;color:rgba(255,255,255,.45);margin-top:4px}
+.error{display:none;background:rgba(201,64,64,.15);border:1px solid rgba(201,64,64,.3);color:#f87171;padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:16px;text-align:center}
+.field{margin-bottom:14px}
+.field label{font-size:11px;font-weight:600;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px}
+.field input{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:10px 14px;color:#fff;font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .15s}
+.field input:focus{border-color:#0e7c7b}
+.btn{width:100%;background:#0e7c7b;border:none;color:#fff;padding:12px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s;margin-top:8px}
+.btn:hover{background:#14a8a7}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.footer-text{text-align:center;margin-top:16px;font-size:11px;color:rgba(255,255,255,.2)}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-circle">GO</div>
+    <div class="logo-name">Grupo Oroño</div>
+    <div class="logo-sub">Proyección de Cobranzas</div>
+  </div>
+  <div class="error" id="err"></div>
+  <div class="field">
+    <label>Usuario</label>
+    <input id="user" type="text" placeholder="Ingresá tu usuario" autocomplete="username"
+      onkeydown="if(event.key==='Enter')document.getElementById('pass').focus()">
+  </div>
+  <div class="field" style="margin-bottom:22px">
+    <label>Contraseña</label>
+    <input id="pass" type="password" placeholder="Ingresá tu contraseña" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')doLogin()">
+  </div>
+  <button class="btn" id="btn" onclick="doLogin()">Ingresar</button>
+  <div class="footer-text">Sistema interno — acceso restringido</div>
+</div>
+
+<script>
+const EDGE_URL = 'https://ycbhlgbubkryorfejodn.supabase.co/functions/v1/super-service';
+const SUPA_KEY = 'sb_publishable_p2irR-kgmz4sRMSi4zW2fw_tUNC1djU';
+
+if(sessionStorage.getItem('go_session')){
+  window.location.replace('index.html');
+}
+
+async function doLogin(){
+  const btn = document.getElementById('btn');
+  const err = document.getElementById('err');
+  const user = document.getElementById('user').value.trim().toLowerCase();
+  const pass = document.getElementById('pass').value.trim();
+
+  if(!user || !pass){ showErr('Completá usuario y contraseña'); return; }
+
+  btn.textContent = 'Verificando...';
+  btn.disabled = true;
+  err.style.display = 'none';
+
+  try{
+    const resp = await fetch(EDGE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPA_KEY}`
+      },
+      body: JSON.stringify({ usuario: user, password: pass })
+    });
+
+    const data = await resp.json();
+
+    if(!resp.ok || !data.ok){
+      showErr('Usuario o contraseña incorrectos');
+      btn.textContent='Ingresar'; btn.disabled=false; return;
+    }
+
+    const u = data.user;
+
+    // Guardar si necesita crear contraseña
+    if(!u.has_password){
+      sessionStorage.setItem('go_needs_password', 'true');
+    } else {
+      sessionStorage.removeItem('go_needs_password');
+    }
+
+    // Las 9 instituciones del panel. La clave de la izquierda es la que lee
+    // index.html (instFromKey); la de la derecha, la columna de Supabase.
+    // Si la Edge Function no devolviera alguna columna, queda en false: sin acceso.
+    const instituciones = {
+      PARQUE:      !!u.parque,
+      NIÑOS:       !!u.ninos,
+      ICR:         !!u.icr,
+      CTC:         !!u.ctc,
+      CIBIC:       !!u.cibic,
+      GO_FUNES:    !!u.go_funes,
+      SAN_NICOLAS: !!u.san_nicolas,
+      GO:          !!u.go,
+      INECO:       !!u.ineco
+    };
+    // Un admin ve todo aunque tenga los checks en false
+    if(u.tipo === 'admin') Object.keys(instituciones).forEach(k=>instituciones[k]=true);
+
+    const pestanas = u.pestanas || 'todas';
+    sessionStorage.setItem('go_session', JSON.stringify({
+      id:       u.id,
+      usuario:  u.usuario,
+      tipo:     u.tipo,
+      instituciones,
+      pestanas,
+      pestañas: pestanas   // compat: index.html viejo lee la clave con ñ
+    }));
+
+    window.location.replace('index.html');
+
+  } catch(e){
+    console.error(e);
+    showErr('Error de conexión. Verificá tu internet.');
+  }
+
+  btn.textContent = 'Ingresar';
+  btn.disabled = false;
+}
+
+function showErr(msg){
+  const err = document.getElementById('err');
+  err.textContent = msg;
+  err.style.display = 'block';
+}
+</script>
+</body>
+</html>
