@@ -3139,10 +3139,28 @@ function buildDebitosCharts(){
     const selFins = (!finsArr || finsArr==='__ALL__' || (Array.isArray(finsArr)&&finsArr.length===0))
       ? D.all_fins
       : (Array.isArray(finsArr)?finsArr:[finsArr]);
+    const finSet = new Set(selFins);
+    // Respetar el filtro de institución del tablero ('' = todas las consolidadas).
+    // Se recalcula desde RAW_DATA + FACTURADO_DATA con la misma métrica del ranking,
+    // porque D.all_fins_evo viene agregado por TODAS las instituciones.
+    const instF = document.getElementById('deb-inst-ranking')?.value || '';
+    const instsR = instF ? (getAllowedInsts().includes(instF)?[instF]:[]) : getInsts();
     const d={};
     MESES_D.forEach(m=>{
-      let deb=0, neto=0;
-      selFins.forEach(f=>{ const e=D.all_fins_evo[f]?.[m]; if(e){ deb+=e.deb; neto+=e.neto; } });
+      let deb=0, fact=0, cobDeb=0;
+      instsR.forEach(i=>{
+        const recs = (typeof RAW_DATA!=='undefined' && RAW_DATA[m]?.[i]?.debitos) || [];
+        recs.forEach(r=>{
+          if(!finSet.has((r.financiador||'').trim())) return;
+          const db = Math.abs(r.debitado||0);
+          deb += db;
+          cobDeb += db + Math.abs(r.cobrado||0);
+        });
+        if(typeof FACTURADO_DATA!=='undefined' && FACTURADO_DATA && FACTURADO_DATA[m]){
+          selFins.forEach(f=>{ fact += (FACTURADO_DATA[m][f] && FACTURADO_DATA[m][f][i]) || 0; });
+        }
+      });
+      const neto = fact > 0 ? fact : cobDeb; // caso N/P: sin facturado, base = cobrado + débito
       d[m]={deb, neto, pct: neto>0? parseFloat((deb/neto*100).toFixed(2)) : 0};
     });
     if(!d) return;
@@ -3178,7 +3196,8 @@ function buildDebitosCharts(){
                    : fins.length===1 ? fins[0]
                    : fins.length+' financiadores';
     const t = document.getElementById('deb-fin-chart-title');
-    if(t) t.textContent = 'Tendencia mensual — ' + finLabel;
+    const instSel = document.getElementById('deb-inst-ranking')?.value || '';
+    if(t) t.textContent = 'Tendencia mensual — ' + finLabel + (instSel ? ' · ' + instSel : '');
     if(fins.length) showDebDetail(fins); // detalle de los financiadores elegidos
     else { // sin selección: limpiar el panel de detalle
       const empty=document.getElementById('deb-detail-empty'), wrap=document.getElementById('deb-detail-wrap');
