@@ -954,6 +954,26 @@ select.deb-ctrl{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://ww
 
     </div>
 
+    <!-- Facturas sin responsable asignado -->
+    <div id="resp-sinresp-wrap" style="display:none;margin-top:20px">
+      <div class="sec-title">Facturas sin responsable asignado</div>
+      <div class="tc">
+        <div class="tc-head"><h3>⚠️ Sin responsable</h3><span id="resp-sinresp-count"></span></div>
+        <div style="max-height:340px;overflow-y:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead style="position:sticky;top:0;background:var(--navy);z-index:5"><tr>
+              <th style="padding:7px 12px;color:rgba(255,255,255,.8);text-align:left;font-size:10px;text-transform:uppercase">Institución</th>
+              <th style="padding:7px 12px;color:rgba(255,255,255,.8);text-align:left;font-size:10px;text-transform:uppercase">Financiador</th>
+              <th style="padding:7px 12px;color:rgba(255,255,255,.8);text-align:left;font-size:10px;text-transform:uppercase">Comprobante</th>
+              <th style="padding:7px 12px;color:rgba(255,255,255,.8);text-align:left;font-size:10px;text-transform:uppercase">Fecha Fact.</th>
+              <th style="padding:7px 12px;color:rgba(255,255,255,.8);text-align:right;font-size:10px;text-transform:uppercase">Adeudado</th>
+            </tr></thead>
+            <tbody id="resp-sinresp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 </main>
 </div><!-- end page-responsables -->
@@ -3286,6 +3306,8 @@ window.showDebDetail = function(financiador){
 // == RESPONSABLES PAGE ==
 let respData = {};
 let respInstChart = null;
+// Etiqueta del bucket para las filas que vienen SIN responsable cargado.
+const SIN_RESP = '⚠️ SIN RESPONSABLE';
 
 async function loadResponsables(){
   document.getElementById('resp-loading').style.display='block';
@@ -3306,9 +3328,11 @@ async function loadResponsables(){
 
     // Group by responsable
     const byResp = {};
+    const sinResp = [];   // filas con el campo Responsable vacío
     rows.forEach(row=>{
-      const res  = String(row['Responsable']||'').trim();
-      if(!res || res==='' || res==='undefined') return;
+      let res    = String(row['Responsable']||'').trim();
+      const vacio = (!res || res==='undefined' || res==='null');
+      if(vacio) res = SIN_RESP;   // se agrupan como un responsable más para poder detectarlas
       const ad   = parseArg(row['Adeudado']);
       const cob  = Math.abs(parseArg(row['Cobrado']));
       const deb  = Math.abs(parseArg(row['Debitado']));
@@ -3318,6 +3342,9 @@ async function loadResponsables(){
       // No consolidan salvo que sean la institución activa del filtro BI
       if(inst && INSTS_NO_CONSOLIDA.includes(inst) && window._activeInst !== inst) return;
       if(ad===0 && cob===0 && deb===0 && net===0) return;
+
+      if(vacio) sinResp.push({inst, fin, comp:String(row['Comprobante']||'').trim(),
+                              fecha:String(row['FechaFact']||'').substring(0,10), ad});
 
       if(!byResp[res]) byResp[res] = {presup:0,cobrado:0,debitado:0,neto:0,fins:{},insts:{}};
       // presup suma CON SIGNO: los adeudados negativos (anticipos / notas a cuenta)
@@ -3342,6 +3369,8 @@ async function loadResponsables(){
     });
 
     respData = byResp;
+    window._respSinResp = sinResp;
+    renderSinResp(sinResp);
 
     // KPIs
     const totalPresup = Object.values(byResp).reduce((a,v)=>a+v.presup,0);
@@ -3349,7 +3378,8 @@ async function loadResponsables(){
     const totalDeb    = Object.values(byResp).reduce((a,v)=>a+v.debitado,0);
     const totalNC     = totalPresup - totalNeto;
     document.getElementById('resp-kpis').innerHTML=`
-      <div class="kpi-card"><div class="kpi-label">Responsables activos</div><div class="kpi-value" style="font-size:36px">${Object.keys(byResp).length}</div><div class="kpi-sub">${liveMesNombre()} ${ANIO_PANEL}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Responsables activos</div><div class="kpi-value" style="font-size:36px">${Object.keys(byResp).filter(k=>k!==SIN_RESP).length}</div><div class="kpi-sub">${liveMesNombre()} ${ANIO_PANEL}</div></div>
+      ${sinResp.length?`<div class="kpi-card k-amber"><div class="kpi-label">Sin responsable</div><div class="kpi-value">${fmt(byResp[SIN_RESP]?byResp[SIN_RESP].presup:0)}</div><span class="kpi-badge kb-amber">${sinResp.length} ${sinResp.length===1?'factura':'facturas'} a asignar</span></div>`:''}
       <div class="kpi-card k-green"><div class="kpi-label">Total Cobrado + Débitos</div><div class="kpi-value">${fmt(totalNeto)}</div><span class="kpi-badge ${totalNeto>=totalPresup?'kb-green':'kb-red'}">${totalPresup?(totalNeto/totalPresup*100).toFixed(1)+'%':'—'} del presupuesto</span></div>
       <div class="kpi-card k-amber"><div class="kpi-label">Total Debitado</div><div class="kpi-value">${fmt(totalDeb)}</div><span class="kpi-badge kb-amber">${totalNeto?(totalDeb/totalNeto*100).toFixed(1)+'%':'—'} sobre cobrado</span></div>
       <div class="kpi-card ${totalNC>0?'k-blue':'k-green'}"><div class="kpi-label">Ppto No Cobrado</div><div class="kpi-value">${fmt(totalNC)}</div><div class="kpi-sub">${totalNC>0?'pendiente de cobro':'superó el presupuesto'}</div></div>`;
@@ -3365,9 +3395,10 @@ async function loadResponsables(){
         const pctDeb = d.neto?(d.debitado/d.neto*100):0;
         const tr = document.createElement('tr');
         tr.style.cursor='pointer';
+        if(res===SIN_RESP) tr.style.background='#fef3c7';
         tr.onclick=()=>showRespDetail(res);
         tr.innerHTML=`
-          <td><strong>${res}</strong></td>
+          <td><strong style="${res===SIN_RESP?'color:#b45309':''}">${res}</strong></td>
           <td class="r">${fmt(d.presup)}</td>
           <td class="r cell-green">${fmt(d.neto)}</td>
           <td class="r"><span style="font-weight:700;color:${pctCumpl>=100?'#166534':'#991b1b'};background:${pctCumpl>=100?'#dcfce7':'#fee2e2'};padding:2px 7px;border-radius:3px">${pctCumpl.toFixed(1)}%</span></td>
@@ -3390,6 +3421,25 @@ async function loadResponsables(){
     document.getElementById('resp-error').style.display='block';
     window._respLoaded = false;
   }
+}
+
+function renderSinResp(list){
+  const wrap  = document.getElementById('resp-sinresp-wrap');
+  const tbody = document.getElementById('resp-sinresp-tbody');
+  if(!wrap||!tbody) return;
+  if(!list || !list.length){ wrap.style.display='none'; tbody.innerHTML=''; return; }
+  const total = list.reduce((a,r)=>a+r.ad,0);
+  document.getElementById('resp-sinresp-count').textContent =
+    `${list.length} ${list.length===1?'factura':'facturas'} · ${fmt(total)}`;
+  tbody.innerHTML = list.sort((a,b)=>b.ad-a.ad).map(r=>`
+    <tr style="border-bottom:1px solid var(--gray-200);background:#fffbeb">
+      <td style="padding:7px 12px;font-size:12px"><span style="background:rgba(14,124,123,.15);color:#1a6b5a;padding:2px 7px;border-radius:3px;font-size:11px">${r.inst||'—'}</span></td>
+      <td style="padding:7px 12px;font-size:12px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.fin||''}">${r.fin||'—'}</td>
+      <td style="padding:7px 12px;font-size:12px;font-weight:600">${r.comp||'—'}</td>
+      <td style="padding:7px 12px;font-size:12px;color:var(--gray-500)">${r.fecha||'—'}</td>
+      <td style="padding:7px 12px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;color:#b45309">${fmt(r.ad)}</td>
+    </tr>`).join('');
+  wrap.style.display='block';
 }
 
 function filterRespFin(){
@@ -3471,7 +3521,8 @@ function showRespInstByFin(resp, fin){
       const jd = junioData[inst];
       if(!jd) return;
       [...(jd.facturas||[]),...(jd.debitos||[])].forEach(r=>{
-        if(r.responsable===resp && r.financiador===fin){
+        const rResp = String(r.responsable||'').trim() || SIN_RESP;
+        if(rResp===resp && r.financiador===fin){
           if(!instData[inst]) instData[inst]={neto:0,presup:0};
           instData[inst].presup += Math.abs(r.adeudado||0);
           instData[inst].neto  += Math.abs(r.cobrado||0) + Math.abs(r.debitado||0);
