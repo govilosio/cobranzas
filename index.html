@@ -3320,7 +3320,9 @@ async function loadResponsables(){
       if(ad===0 && cob===0 && deb===0 && net===0) return;
 
       if(!byResp[res]) byResp[res] = {presup:0,cobrado:0,debitado:0,neto:0,fins:{},insts:{}};
-      byResp[res].presup   += ad>0?ad:0;
+      // presup suma CON SIGNO: los adeudados negativos (anticipos / notas a cuenta)
+      // restan del presupuesto, igual que en Mes Actual y en el histórico.
+      byResp[res].presup   += ad;
       byResp[res].cobrado  += cob;
       byResp[res].debitado += deb>0?deb:0;
       byResp[res].neto     += net;
@@ -3328,13 +3330,13 @@ async function loadResponsables(){
       // by financiador
       if(fin){
         if(!byResp[res].fins[fin]) byResp[res].fins[fin]={presup:0,neto:0};
-        byResp[res].fins[fin].presup += ad>0?ad:0;
+        byResp[res].fins[fin].presup += ad;
         byResp[res].fins[fin].neto   += net;
       }
       // by institucion
       if(inst){
         if(!byResp[res].insts[inst]) byResp[res].insts[inst]={presup:0,neto:0};
-        byResp[res].insts[inst].presup += ad>0?ad:0;
+        byResp[res].insts[inst].presup += ad;
         byResp[res].insts[inst].neto   += net;
       }
     });
